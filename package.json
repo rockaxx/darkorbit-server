@@ -1,0 +1,19 @@
+{
+  "name": "darkorbit-browser-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Self-hosted Ruffle runtime and restricted WebSocket gateway for DarkOrbit",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test:unit": "node --test test/*.test.js",
+    "verify": "node scripts/verify-browser.js",
+    "start:gateway": "node scripts/ws-proxy.js"
+  },
+  "dependencies": {
+    "@ruffle-rs/ruffle": "0.6.0",
+    "ws": "8.21.3"
+  }
+}
