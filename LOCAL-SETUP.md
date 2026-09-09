@@ -59,3 +59,17 @@ Build pouziva lokalne Visual Studio/Roslyn a DLL z `DarkOrbit 10.0/bin/Debug`. P
 - Kompatibilita MySQL ovladaca: https://mariadb.com/docs/server/server-management/variables-and-modes/old_mode
 
 Zostava pouziva povodny historicky emulator; overeny je lokalny start, login a nacitanie mapy, nie vsetky herne eventy a mechaniky.
+
+## Verejne hranie cez bezplatny tunnel
+
+Na docasne hranie s ostatnymi spusti `Start-DarkOrbit-Tunnel.cmd`. Skript spusti lokálnu zostavu, gateway a Cloudflare Quick Tunnel, potom vypíše odkaz v tvare `https://....trycloudflare.com`. Odkaz otvorí web klienta a podporuje aj herný/chatový WebSocket cez rovnakú adresu. Cloudflare Quick Tunnel je určený na testovanie, URL sa po reštarte zmení a služba nemá garantovanú dostupnosť.
+
+Chýbajúci `cloudflared` skript automaticky stiahne do `.local`. Tunnel zastaví `Stop-DarkOrbit-Tunnel.cmd`; lokálny server sa zastavuje samostatne cez `Stop-DarkOrbit.cmd`. Verejný odkaz sa uloží aj do `.local/public-url.txt` a logy sú v `.local/logs/tunnel.err.log`.
+
+Pri štarte tunnelu sa vytvorí Windows ZIP na `/downloads/DarkOrbit-Client.zip`. Tlačidlo na domovskej stránke po prihlásení používa čas zostavenia v URL, aby hráč dostal aktuálny balík. ZIP obsahuje Electron, Pepper Flash, dve samostatné karty Domov/Hra a tlačidlo Hangár. Prepnutie karty zachová bežiacu mapu. Hráč balík rozbalí a spustí `Start-Client.cmd`.
+
+Staré SWF vytvárajú HTTP adresy napevno. `scripts/client-transport.js` preto poskytuje klientovi loopback web na `127.0.0.2:80`, herný most na portoch 8080/9338 a socket policy na 843. HTTP, API a binárne súbory prenáša cez verejný HTTPS tunnel, herné spojenia cez WSS. Adresa `.2` umožňuje hrať aj na počítači, kde server počúva na `.1`. Používateľské dáta a log sú v `%APPDATA%/DarkOrbit-Tunnel-Client`. Naraz spúšťaj jednu kópiu tohto klienta.
+
+Pri oprave hangára boli opravené XML deklarácie v lokálnom CMS: `flashinput/translationEquipment.php`, `flashinput/translationGalaxygates.php` a `swf_global/flashinput/getMainNavRes.php`. PHP ich musí vypísať ako XML, nie interpretovať `<?xml` ako krátky PHP otvárací tag.
+
+Overenie prenosu pri zatvorenom klientovi: `node --test test/client-transport.test.js`. Na diagnostiku Flashu možno výslovne spustiť klienta s `--remote-debugging-port=9223` a použiť `test/flash-client-diagnostic.js`; bežný launcher tento port nezapína.
