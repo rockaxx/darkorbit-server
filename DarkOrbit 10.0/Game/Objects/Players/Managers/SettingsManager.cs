@@ -449,8 +449,6 @@ namespace Ow.Game.Objects.Players.Managers
                 DroneManager.DOUBLE_ARROW_FORMATION, DroneManager.DIAMOND_FORMATION,
                 DroneManager.CHEVRON_FORMATION, DroneManager.MOTH_FORMATION,
                 DroneManager.CRAB_FORMATION, DroneManager.HEART_FORMATION,
-                DroneManager.DRILL_FORMATION,DroneManager.RING_FORMATION,
-                DroneManager.WHEEL_FORMATION,
         };
 
         public void SendUserKeyBindingsUpdateCommand()

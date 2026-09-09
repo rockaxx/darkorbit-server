@@ -2,6 +2,7 @@ param([switch]$NoClient)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $local = Join-Path $root '.local'
+& "$PSScriptRoot/apply-web-ui.ps1"
 $secrets = Get-Content "$local/credentials.json" -Raw | ConvertFrom-Json
 function Start-LocalProcess($name, $exe, $arguments, $workingDirectory, [switch]$Visible) {
     $pidFile = Join-Path $local "$name.pid"

@@ -112,7 +112,15 @@ namespace Ow.Game.Objects
         public DateTime lastHpRepairTime = new DateTime();
         private void CheckHitpointsRepair()
         {
-            if (CurrentHitPoints >= MaxHitPoints || AttackingOrUnderAttack())
+            var lastCombatActivity = new[]
+            {
+                LastCombatTime,
+                AttackManager.lastAttackTime,
+                AttackManager.lastRSBAttackTime,
+                AttackManager.lastRocketAttack
+            }.Max();
+
+            if (!RepairBotPolicy.CanRepair(Destroyed, CurrentHitPoints, MaxHitPoints, lastCombatActivity, DateTime.Now))
             {
                 if (Storage.RepairBotActivated)
                     RepairBot(false);
@@ -129,6 +137,9 @@ namespace Ow.Game.Objects
             repairHitpoints += Maths.GetPercentage(repairHitpoints, GetSkillPercentage("Engineering"));
 
             Heal(repairHitpoints);
+
+            if (CurrentHitPoints >= MaxHitPoints)
+                RepairBot(false);
 
             lastHpRepairTime = DateTime.Now;
         }
@@ -164,6 +175,7 @@ namespace Ow.Game.Objects
 
         public void RepairBot(bool activated)
         {
+            if (Storage.RepairBotActivated == activated) return;
             Storage.RepairBotActivated = activated;
             SendCommand(GetBeaconCommand());
         }

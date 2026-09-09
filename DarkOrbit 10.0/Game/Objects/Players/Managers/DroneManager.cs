@@ -149,6 +149,7 @@ namespace Ow.Game.Objects.Players.Managers
         public DateTime formationCooldown = new DateTime();
         public void ChangeDroneFormation(string NewFormationID)
         {
+            if (!DroneFormationPolicy.IsAllowed(NewFormationID)) return;
             if (NewFormationID == Player.Settings.InGameSettings.selectedFormation) return;
 
             if (formationCooldown.AddMilliseconds(TimeManager.FORMATION_COOLDOWN) < DateTime.Now || Player.Storage.GodMode)

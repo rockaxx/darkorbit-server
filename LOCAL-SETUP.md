@@ -1,5 +1,15 @@
 # DarkOrbit 10 na tomto pocitaci
 
+## Web UI
+
+The redesigned CMS templates and shared theme live in `web/cms`. `scripts/start.ps1` applies them automatically to `.local/cms`. To update an already running website, run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/apply-web-ui.ps1`, then refresh the browser. Original overwritten files are saved once in `.local/ui-originals`; database and credentials are unaffected.
+
+The theme covers login/registration, pilot overview, fleet, equipment page, shop, skills, clan pages and settings. Fleet artwork resolves corporation-specific support ships and the Pusat/Razer filename aliases from the installed CMS assets. The equipment editor itself continues to use the Windows client's bundled Flash runtime; modern browsers show a client download link.
+
+Browser verification requires Node.js 22.12 or newer (Puppeteer); the game gateway retains its existing Node.js requirement.
+
+Verification: `.local/php/php.exe test/ship-art.test.php` checks ship artwork. `npm run verify:ui` uses Chrome (`CHROME_PATH` can override its executable) and a temporary account to test registration, login, ship selection, shop dialog, images, desktop/mobile layouts and navigation. The temporary pilot is deleted afterward. Screenshots are written to `.local/logs/ui-*.png`. Install dependencies with `npm install` first.
+
 Dvojklik na `Start-DarkOrbit.cmd` spusti databazu, herny server, web a samostatne okno hry. Klient automaticky prihlasi vytvoreny testovaci ucet. `Stop-DarkOrbit.cmd` zostavu zastavi. Skripty nemenia systemovu politiku PowerShellu ani neinstaluju Windows sluzby.
 
 Web: http://127.0.0.1/ . Prihlasovacie udaje su v `.local/credentials.json` (polozky `username` a `password`). Toto je lokalny testovaci server. Flash klient je pribaleny v samostatnom okne, bezny moderny prehliadac staci na webovy hangar a login.

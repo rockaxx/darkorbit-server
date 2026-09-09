@@ -202,7 +202,7 @@ namespace Ow.Game.Objects
                 if (EventManager.JackpotBattle.InEvent(player))
                     GameManager.SendPacketToMap(EventManager.JackpotBattle.Spacemap.Id, $"0|A|STM|msg_jackpot_players_left|%COUNT%|{(EventManager.JackpotBattle.Spacemap.Characters.Count - 1)}");
 
-                if (destroyer is Player && (destroyer as Player).Storage.KilledPlayerIds.Where(x => x == player.Id).Count() <= 13)
+                if (destroyer is Player && (destroyer as Player).Storage.KilledPlayerIds.Count(x => x == player.Id) <= 13)
                     (destroyer as Player).Storage.KilledPlayerIds.Add(player.Id);
 
                 player.Group?.UpdateTarget(player, new List<command_i3O> { new GroupPlayerDisconnectedModule(true) });
@@ -273,6 +273,7 @@ namespace Ow.Game.Objects
                 int honor = 0;
                 int uridium = 0;
                 int credits = 0;
+                int repeatedKillCount = 0;
 
                 bool reward = true;
                 var changeType = ChangeType.INCREASE;
@@ -287,8 +288,8 @@ namespace Ow.Game.Objects
                     uridium = (this as Character).Ship.Rewards.Uridium;
                     credits = (this as Character).Ship.Rewards.Credits;
 
-                    var count = destroyerPlayer.Storage.KilledPlayerIds.Where(x => x == Id).Count();
-                    if (this is Player && count >= 14 && !Duel.InDuel(destroyerPlayer))
+                    repeatedKillCount = destroyerPlayer.Storage.KilledPlayerIds.Count(x => x == Id);
+                    if (this is Player && repeatedKillCount >= 14 && !Duel.InDuel(destroyerPlayer))
                     {
                         reward = false;
                         destroyerPlayer.SendPacket($"0|A|STM|pusher_info_no_reward|%NAME%|{Name}");
@@ -342,7 +343,7 @@ namespace Ow.Game.Objects
                     if (!Duel.InDuel(this as Player))
                     {
                         using (var mySqlClient = SqlDatabaseManager.GetClient())
-                            mySqlClient.ExecuteNonQuery($"INSERT INTO log_player_kills (killer_id, target_id) VALUES ({destroyerPlayer.Id}, {Id})");
+                            mySqlClient.ExecuteNonQuery(PlayerKillLog.CreateInsert(destroyerPlayer.Id, Id, repeatedKillCount >= 14));
                     }
 
                     new CargoBox(Position, Spacemap, false, false, destroyerPlayer);

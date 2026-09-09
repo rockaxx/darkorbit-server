@@ -108,6 +108,13 @@ namespace Ow.Net.netty.handlers
         {
             try
             {
+                var normalizedFormation = DroneFormationPolicy.Normalize(player.Settings.InGameSettings.selectedFormation);
+                if (normalizedFormation != player.Settings.InGameSettings.selectedFormation)
+                {
+                    player.Settings.InGameSettings.selectedFormation = normalizedFormation;
+                    QueryManager.SavePlayer.Settings(player, "inGameSettings", player.Settings.InGameSettings);
+                }
+
                 player.SendCommand(player.GetShipInitializationCommand());
 
                 if (player.Title != "")

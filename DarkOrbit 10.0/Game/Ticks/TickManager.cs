@@ -36,21 +36,27 @@ namespace Ow.Game.Ticks
 
         public async void Tick()
         {
-            try
+            while (true)
             {
-                while (true)
-                {
-                    for (var i = 0; i < Ticks.Count; i++)
-                        if (Ticks[i] != null)
-                            Ticks[i].Tick();
-
-                    await Task.Delay(TICKS_PER_SECOND);
-                }
+                RunFrame();
+                await Task.Delay(TICKS_PER_SECOND);
             }
-            catch (Exception e)
+        }
+
+        public void RunFrame()
+        {
+            foreach (var tick in Ticks.ToArray())
             {
-                Out.WriteLine("Tick void exception: " + e, "TickManager.cs");
-                Logger.Log("error_log", $"- [TickManager.cs] Tick void exception: {e}");
+                if (tick == null) continue;
+
+                try
+                {
+                    tick.Tick();
+                }
+                catch (Exception e)
+                {
+                    Logger.Log("error_log", $"- [TickManager.cs] {tick.GetType().FullName} tick exception: {e}");
+                }
             }
         }
     }
