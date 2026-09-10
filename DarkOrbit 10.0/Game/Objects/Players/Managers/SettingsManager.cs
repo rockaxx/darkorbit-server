@@ -310,8 +310,8 @@ namespace Ow.Game.Objects.Players.Managers
             new BoundKeysBase(6, 0, 0, new List<int>{76}),
             new BoundKeysBase(9, 0, 0, new List<int>{72}),
             new BoundKeysBase(10, 0, 0, new List<int>{70}),
-            new BoundKeysBase(11, 0, 0, new List<int>{107}),
-            new BoundKeysBase(12, 0, 0, new List<int>{109}),
+            new BoundKeysBase(UserKeyBindingsModule.ZOOM_IN, 0, 0, new List<int>{107, 187}),
+            new BoundKeysBase(UserKeyBindingsModule.ZOOM_OUT, 0, 0, new List<int>{109, 189}),
             new BoundKeysBase(14, 0, 0, new List<int>{13}),
             new BoundKeysBase(15, 0, 0, new List<int>{9}),
             new BoundKeysBase(8, 0, 9, new List<int>{121}),
@@ -452,7 +452,10 @@ namespace Ow.Game.Objects.Players.Managers
         };
 
         public void SendUserKeyBindingsUpdateCommand()
-        {            
+        {
+            if (EnsureZoomBindings())
+                QueryManager.SavePlayer.Settings(Player, "boundKeys", Player.Settings.BoundKeys);
+
             var keyBindingsModuleCommands = new List<UserKeyBindingsModule>();
             List<BoundKeysBase> actions = Player.Settings.BoundKeys;
 
@@ -462,6 +465,35 @@ namespace Ow.Game.Objects.Players.Managers
                     action.actionType, action.keyCodes, action.parameter, action.charCode));
             }
             Player.SendCommand(UserKeyBindingsUpdateCommand.write(keyBindingsModuleCommands, false));         
+        }
+
+        private bool EnsureZoomBindings()
+        {
+            var changed = EnsureZoomBinding(UserKeyBindingsModule.ZOOM_IN, 107, 187);
+            changed |= EnsureZoomBinding(UserKeyBindingsModule.ZOOM_OUT, 109, 189);
+            return changed;
+        }
+
+        private bool EnsureZoomBinding(short actionType, params int[] keyCodes)
+        {
+            var binding = Player.Settings.BoundKeys.FirstOrDefault(item => item.actionType == actionType);
+            if (binding == null)
+            {
+                Player.Settings.BoundKeys.Add(new BoundKeysBase(actionType, 0, 0, keyCodes.ToList()));
+                return true;
+            }
+
+            if (binding.keyCodes == null)
+                binding.keyCodes = new List<int>();
+
+            var changed = false;
+            foreach (var keyCode in keyCodes)
+            {
+                if (binding.keyCodes.Contains(keyCode)) continue;
+                binding.keyCodes.Add(keyCode);
+                changed = true;
+            }
+            return changed;
         }
 
         public void SendUserSettingsCommand()

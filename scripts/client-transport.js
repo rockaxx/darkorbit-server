@@ -6,15 +6,21 @@ const WebSocket = require('ws');
 
 // The legacy SWFs construct HTTP URLs themselves. Keep all Flash traffic on a
 // single loopback origin and carry it to the server over HTTPS / WSS.
-const address = '127.0.0.2';
-const localOrigin = `http://${address}`;
-function rewrite(text, remote) {
-  return text.split(remote.origin).join(localOrigin)
-    .split(remote.hostname).join(address)
-    .replace(/127\.0\.0\.1/g, address);
+const defaultAddress = '127.0.0.2';
+const localOrigin = `http://${defaultAddress}`;
+function rewrite(text, remote, targetOrigin = localOrigin, targetAddress = defaultAddress) {
+  return text.split(remote.origin).join(targetOrigin)
+    .split(remote.hostname).join(targetAddress)
+    .replace(/127\.0\.0\.1/g, targetAddress);
 }
-async function startTransport(origin, log = () => {}) {
+async function startTransport(origin, log = () => {}, options = {}) {
   const remote = new URL(origin);
+  const address = options.address || defaultAddress;
+  const webPort = options.webPort || 80;
+  const gamePort = options.gamePort || 8080;
+  const chatPort = options.chatPort || 9338;
+  const policyPort = options.policyPort || 843;
+  const targetOrigin = webPort === 80 ? `http://${address}` : `http://${address}:${webPort}`;
   const servers = []; const connections = new Set();
   const close = () => { for (const connection of connections) connection.destroy(); for (const server of servers) server.close(); };
   const bind = async (server, port) => {
@@ -32,13 +38,13 @@ async function startTransport(origin, log = () => {}) {
       const headers = { ...req.headers, host: remote.host, 'accept-encoding': 'identity' };
       delete headers.connection;
       if (headers.origin) headers.origin = remote.origin;
-      if (headers.referer) headers.referer = headers.referer.replace(localOrigin, remote.origin);
+      if (headers.referer) headers.referer = headers.referer.replace(targetOrigin, remote.origin);
       // Flash inventory emits //swf_global/...; it is a path, not a new host.
       const target = new URL(remote.origin + '/' + req.url.replace(/^\/+/, ''));
       const upstream = (remote.protocol === 'https:' ? https : http).request(target, { method: req.method, headers }, response => {
         const out = { ...response.headers };
         delete out['transfer-encoding'];
-        if (out.location) out.location = rewrite(out.location, remote);
+        if (out.location) out.location = rewrite(out.location, remote, targetOrigin, address);
         if (out['set-cookie']) out['set-cookie'] = out['set-cookie'].map(cookie => cookie.replace(/;\s*secure\b/ig, '').replace(/;\s*domain=[^;]+/ig, '').replace(/SameSite=None/ig, 'SameSite=Lax'));
         const type = String(out['content-type'] || '');
         if (!/text|javascript|json|xml|css/i.test(type)) { res.writeHead(response.statusCode, out); response.pipe(res); return; }
@@ -50,7 +56,7 @@ async function startTransport(origin, log = () => {}) {
             if (out['content-encoding'] === 'gzip') body = zlib.gunzipSync(body);
             else if (out['content-encoding'] === 'br') body = zlib.brotliDecompressSync(body);
             else if (out['content-encoding'] === 'deflate') body = zlib.inflateSync(body);
-            body = Buffer.from(rewrite(body.toString('utf8'), remote));
+            body = Buffer.from(rewrite(body.toString('utf8'), remote, targetOrigin, address));
             delete out['content-encoding']; delete out.etag;
             out['content-length'] = body.length;
             res.writeHead(response.statusCode, out); res.end(body);
@@ -60,8 +66,8 @@ async function startTransport(origin, log = () => {}) {
       upstream.on('error', error => { log(`HTTP ${req.url.split('?')[0]}: ${error.message}`); if (!res.headersSent) res.writeHead(502); res.end('Server connection failed'); });
       req.pipe(upstream);
     });
-    await bind(web, 80);
-    for (const [port, route] of [[8080, '/socket/game'], [9338, '/socket/chat']]) {
+    await bind(web, webPort);
+    for (const [port, route] of [[gamePort, '/socket/game'], [chatPort, '/socket/chat']]) {
       await bind(net.createServer(tcp => {
         log(`Flash connected ${port}`);
         const ws = new WebSocket(remote.origin.replace(/^http/, 'ws') + route);
@@ -76,11 +82,11 @@ async function startTransport(origin, log = () => {}) {
     await bind(net.createServer(tcp => {
       tcp.setTimeout(5000, () => tcp.destroy());
       tcp.once('data', data => {
-        if (data.toString().startsWith('<policy-file-request/>')) tcp.end('<cross-domain-policy><allow-access-from domain="127.0.0.2" to-ports="8080,9338" /></cross-domain-policy>\0');
+        if (data.toString().startsWith('<policy-file-request/>')) tcp.end(`<cross-domain-policy><allow-access-from domain="${address}" to-ports="${gamePort},${chatPort}" /></cross-domain-policy>\0`);
         else tcp.destroy();
       });
-    }), 843);
-    return { origin: localOrigin, close };
+    }), policyPort);
+    return { origin: targetOrigin, close };
   } catch (error) { close(); throw error; }
 }
 module.exports = { startTransport, rewrite };

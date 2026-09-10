@@ -2,6 +2,7 @@ const { app, BrowserWindow, BrowserView, ipcMain, Menu, dialog } = require('elec
 const fs = require('fs');
 const path = require('path');
 const { startTransport } = require('./client-transport');
+const { readForce2D, findLatestSol, resolveGameCloseAction } = require('./flash-display-mode');
 app.setPath('userData', path.join(app.getPath('appData'), 'DarkOrbit-Tunnel-Client'));
 fs.mkdirSync(app.getPath('userData'), { recursive: true });
 const serverFile = path.join(__dirname, 'server.txt');
@@ -16,6 +17,34 @@ app.whenReady().then(async () => {
   window = new BrowserWindow({ width: 1280, height: 900, title: 'DarkOrbit', webPreferences: { preload: path.join(__dirname, 'client-tabs-preload.js'), contextIsolation: true, nodeIntegration: false } });
   const views = {};
   let active = 'home';
+  let gameForce2D = null;
+  const gameUrl = () => transport.origin + '/map-revolution?clientReload=' + Date.now();
+  async function closeGameTab(view) {
+    if (window.getBrowserView() === view) window.removeBrowserView(view);
+    view.webContents.destroy();
+    delete views.game;
+    select('home');
+  }
+  async function handleGameClose(view) {
+    await new Promise(resolve => setTimeout(resolve, 250));
+    const solRoot = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot', '#SharedObjects');
+    const solPath = findLatestSol(solRoot);
+    const force2D = solPath ? readForce2D(fs.readFileSync(solPath)) : null;
+    const action = resolveGameCloseAction(force2D, gameForce2D);
+    log(`Game requested close: ${action}; Flash force2D=${force2D}; page force2D=${gameForce2D}`);
+    if (action !== 'reload-game') { await closeGameTab(view); return; }
+
+    const version = force2D ? 'false' : 'true';
+    const result = await view.webContents.executeJavaScript(`fetch('/api/', {
+      method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({action: 'change_version', version: ${JSON.stringify(version)}})
+    }).then(response => response.json())`);
+    if (!result.status) throw new Error(result.message || 'Display mode could not be saved.');
+    gameForce2D = force2D;
+    await view.webContents.session.clearCache();
+    await view.webContents.loadURL(gameUrl());
+    select('game');
+  }
   function select(tab) {
     if (!['home', 'game'].includes(tab)) return;
     if (!views[tab]) {
@@ -31,8 +60,21 @@ app.whenReady().then(async () => {
         else if (tab === 'home' && url.includes('/map-revolution')) { event.preventDefault(); select('game'); }
       });
       view.webContents.on('did-fail-load', (_event, code, message) => log(`Page failed ${code}: ${message}`));
+      view.webContents.on('did-finish-load', async () => {
+        if (tab !== 'game') return;
+        try {
+          const html = await view.webContents.executeJavaScript('document.documentElement.innerHTML');
+          const match = html.match(/"display2d"\s*:\s*"([12])"/);
+          gameForce2D = match ? match[1] === '2' : null;
+        } catch (error) { log(`Display mode read failed: ${error.message}`); }
+      });
+      view.webContents.on('close', event => {
+        if (tab !== 'game') return;
+        event.preventDefault();
+        handleGameClose(view).catch(error => { log(`Game close handling failed: ${error.stack || error.message}`); closeGameTab(view); });
+      });
       view.webContents.on('plugin-crashed', () => log('Flash plugin crashed'));
-      view.webContents.loadURL(transport.origin + (tab === 'game' ? '/map-revolution' : '/'));
+      view.webContents.loadURL(tab === 'game' ? gameUrl() : transport.origin + '/');
     }
     window.setBrowserView(views[tab]); active = tab;
     resize(); window.webContents.send('active-tab', tab);
@@ -45,7 +87,7 @@ app.whenReady().then(async () => {
   Menu.setApplicationMenu(Menu.buildFromTemplate([{ label: 'Klient', submenu: [
     { label: 'Domov', accelerator: 'F3', click: () => select('home') },
     { label: 'Hra', accelerator: 'F2', click: () => select('game') },
-    { label: 'Obnoviť aktívnu kartu', accelerator: 'F5', click: () => views[active].webContents.reload() },
+    { label: 'Obnoviť aktívnu kartu', accelerator: 'F5', click: () => active === 'game' ? views.game.webContents.reloadIgnoringCache() : views.home.webContents.reload() },
     { role: 'quit', label: 'Zavrieť' }
   ] }]));
   await window.loadFile(path.join(__dirname, 'client-tabs.html'));

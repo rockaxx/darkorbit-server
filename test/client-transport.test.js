@@ -19,14 +19,16 @@ test('Flash transport preserves POSTs and SWFs, decodes XML and tunnels TCP', as
   await new Promise(resolve=>upstream.listen(0,'127.0.0.1',resolve));
   let transport;
   try {
-    transport = await startTransport(`http://127.0.0.1:${upstream.address().port}`);
+    transport = await startTransport(`http://127.0.0.1:${upstream.address().port}`, undefined, {
+      webPort: 18082, gamePort: 18083, chatPort: 18084, policyPort: 18085
+    });
     const xml = await fetch(transport.origin+'//assets.xml');
     assert.equal(xml.status,200); assert.equal(xml.headers.get('content-encoding'),null);
     assert.equal(await xml.text(),'<host>127.0.0.2</host>');
     assert.deepEqual(Buffer.from(await (await fetch(transport.origin+'/binary.swf')).arrayBuffer()),binary);
     const reply=await (await fetch(transport.origin+'/api',{method:'POST',headers:{cookie:'PHPSESSID=test'},body:'action=load&data=%2B'})).json();
     assert.deepEqual(reply,{body:'action=load&data=%2B',cookie:'PHPSESSID=test'});
-    for (const port of [8080,9338]) await new Promise((resolve,reject)=>{
+    for (const port of [18083,18084]) await new Promise((resolve,reject)=>{
       const tcp=net.connect(port,'127.0.0.2',()=>tcp.write(binary));
       tcp.setTimeout(5000,()=>{tcp.destroy();reject(new Error('TCP timeout'));});
       tcp.once('data',data=>{tcp.destroy();try{assert.deepEqual(data,binary);resolve();}catch(e){reject(e);}});tcp.on('error',reject);

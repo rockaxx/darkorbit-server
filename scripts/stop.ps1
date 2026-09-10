@@ -1,11 +1,11 @@
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $local = Join-Path $root '.local'
-foreach ($entry in @(@('client','electron/electron.exe'),@('emulator','emulator/DarkOrbit.exe'),@('web80','php/php.exe'),@('web','php/php.exe'))) {
+foreach ($entry in @(@('client','electron/electron.exe'),@('ws-proxy',''),@('emulator','emulator/DarkOrbit.exe'),@('web80','php/php.exe'),@('web','php/php.exe'))) {
     $pidFile = Join-Path $local ($entry[0] + '.pid')
     if (!(Test-Path $pidFile)) { continue }
     $process = Get-Process -Id ([int](Get-Content $pidFile)) -ErrorAction SilentlyContinue
-    $expected = [IO.Path]::GetFullPath((Join-Path $local $entry[1]))
+    $expected = if ($entry[0] -eq 'ws-proxy') { (Get-Command node -ErrorAction Stop).Source } else { [IO.Path]::GetFullPath((Join-Path $local $entry[1])) }
     if ($process -and $process.Path -eq $expected) {
         if ($entry[0] -eq 'client') {
             $null = $process.CloseMainWindow()

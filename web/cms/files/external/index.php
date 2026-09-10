@@ -50,7 +50,7 @@
                         <i class="material-icons prefix">lock</i>
                         <input type="email" name="email" id="r-email" class="validate" maxlength="260" required>
                         <label for="r-email">Email</label>
-                        <span class="helper-text" data-error="Enter a valid e-mail address!">Enter your e-mail address (you'll need this for verification and recovering account).</span>
+                        <span class="helper-text" data-error="Enter a valid e-mail address!">Enter your e-mail address for account recovery.</span>
                       </div>
                       <div class="input-field col s12">
                         <i class="material-icons prefix">lock</i>

@@ -3,10 +3,12 @@
 const http = require('node:http');
 const net = require('node:net');
 const { WebSocket, WebSocketServer } = require('ws');
+const { resolveGamePort, resolveWebSocketPort } = require('./ws-proxy-config');
 
-const listenPort = Number(process.env.DO_GATEWAY_PORT || 8081);
+const listenPort = resolveWebSocketPort(process.env);
 const webPort = Number(process.env.DO_WEB_PORT || 80);
-const routes = { '/socket/game': 8080, '/socket/chat': 9338, '/game': 8080, '/chat': 9338 };
+const gamePort = resolveGamePort(process.env);
+const routes = { '/socket/game': gamePort, '/socket/chat': 9338, '/game': gamePort, '/chat': 9338 };
 const server = http.createServer((req, res) => {
   // The response body may be rewritten for public URLs. Ask PHP for plain text
   // so a gzip payload cannot be accidentally relayed with stale encoding data.

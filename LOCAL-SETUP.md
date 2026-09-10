@@ -80,6 +80,8 @@ Pri štarte tunnelu sa vytvorí Windows ZIP na `/downloads/DarkOrbit-Client.zip`
 
 Staré SWF vytvárajú HTTP adresy napevno. `scripts/client-transport.js` preto poskytuje klientovi loopback web na `127.0.0.2:80`, herný most na portoch 8080/9338 a socket policy na 843. HTTP, API a binárne súbory prenáša cez verejný HTTPS tunnel, herné spojenia cez WSS. Adresa `.2` umožňuje hrať aj na počítači, kde server počúva na `.1`. Používateľské dáta a log sú v `%APPDATA%/DarkOrbit-Tunnel-Client`. Naraz spúšťaj jednu kópiu tohto klienta.
 
+Ak lokálna služba `PEMHTTPD-x64` drží Flash port 8080, launcher si vyžiada Windows administrátorské oprávnenie, službu zastaví iba počas behu klienta a po zatvorení ju znovu spustí.
+
 Pri oprave hangára boli opravené XML deklarácie v lokálnom CMS: `flashinput/translationEquipment.php`, `flashinput/translationGalaxygates.php` a `swf_global/flashinput/getMainNavRes.php`. PHP ich musí vypísať ako XML, nie interpretovať `<?xml` ako krátky PHP otvárací tag.
 
 Overenie prenosu pri zatvorenom klientovi: `node --test test/client-transport.test.js`. Na diagnostiku Flashu možno výslovne spustiť klienta s `--remote-debugging-port=9223` a použiť `test/flash-client-diagnostic.js`; bežný launcher tento port nezapína.

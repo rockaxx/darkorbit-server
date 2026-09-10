@@ -1,7 +1,9 @@
 param([switch]$NoClient)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$local = Join-Path $root '.local'
+. "$PSScriptRoot/runtime-config.ps1"
+$runtime = Get-DarkOrbitRuntimeConfig -Root $root
+$local = $runtime.LocalPath
 & "$PSScriptRoot/apply-web-ui.ps1"
 $secrets = Get-Content "$local/credentials.json" -Raw | ConvertFrom-Json
 function Start-LocalProcess($name, $exe, $arguments, $workingDirectory, [switch]$Visible) {
@@ -33,11 +35,18 @@ $env:DO_DB_PORT='3307'
 $env:DO_DB_NAME='darkorbit_local'
 $env:DO_DB_PASSWORD=$secrets.dbPassword
 $env:DO_BIND_ADDRESS='127.0.0.1'
-if (!(Test-Path "$local/emulator/DarkOrbit.exe")) { & "$PSScriptRoot/build.ps1" }
-Start-LocalProcess 'emulator' "$local/emulator/DarkOrbit.exe" @() "$local/emulator"
-foreach ($port in @(8080,9338,4301)) { Wait-LocalPort $port 'Emulator' }
+$env:DO_GAME_PORT=[string]$runtime.GamePort
+$env:DO_WS_PORT=[string]$runtime.WebSocketPort
+$emulator = "$local/emulator/DarkOrbit.exe"
+if (Test-DarkOrbitBuildRequired -SourceRoot "$root/DarkOrbit 10.0" -Executable $emulator) {
+    & "$PSScriptRoot/build.ps1"
+}
+Start-LocalProcess 'emulator' $emulator @() "$local/emulator"
+foreach ($port in @($runtime.GamePort,9338,4301)) { Wait-LocalPort $port 'Emulator' }
 Start-LocalProcess 'web80' "$local/php/php.exe" @('-S','127.0.0.1:80','-t',('"'+$local+'/cms"'),('"'+$PSScriptRoot+'/router.php"')) "$local/cms"
 Wait-LocalPort 80 'Web login'
+Start-LocalProcess 'ws-proxy' $runtime.NodePath @('"'+$PSScriptRoot+'/ws-proxy.js"') $root
+Wait-LocalPort $runtime.WebSocketPort 'WebSocket gateway'
 if (!$NoClient) { Start-LocalProcess 'client' "$local/electron/electron.exe" ('"'+$PSScriptRoot+'/client.js"') $root -Visible }
 Write-Host 'DarkOrbit 10 is running: http://127.0.0.1/'
 Write-Host ('Account: ' + $secrets.username)

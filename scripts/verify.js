@@ -5,6 +5,7 @@ const net = require('net');
 const assert = require('assert').strict;
 const credentials = JSON.parse(fs.readFileSync(path.join(__dirname, '../.local/credentials.json'), 'utf8').replace(/^\uFEFF/, ''));
 const origin = 'http://127.0.0.1';
+const gamePort = Number(process.env.DO_GAME_PORT || 18080);
 async function post(body) {
   return fetch(origin + '/api', { method:'POST', body:new URLSearchParams(body) });
 }
@@ -27,7 +28,7 @@ function gameLogin(packet, expectShip) {
   return new Promise((resolve, reject) => {
     let received = Buffer.alloc(0);
     const initialized = new Set();
-    const socket = net.connect(8080, '127.0.0.1', () => socket.write(packet));
+    const socket = net.connect(gamePort, '127.0.0.1', () => socket.write(packet));
     const timer = setTimeout(() => {
       socket.destroy();
       if (expectShip) reject(new Error('Game did not initialize ship and PET; received: '+[...initialized].join(',')));
@@ -60,10 +61,15 @@ function gameLogin(packet, expectShip) {
   assert.equal((await response.json()).status, true);
   const cookie = response.headers.getSetCookie().map(value => value.split(';')[0]).join('; ');
   const page = await (await fetch(origin+'/map-revolution', {headers:{cookie}})).text();
-  assert.match(page, /"display2d":\s*"2"/);
-  await fetch(origin+'/api', {method:'POST', headers:{cookie}, body:new URLSearchParams({action:'change_version',version:'true'})});
-  const still2d = await (await fetch(origin+'/map-revolution', {headers:{cookie}})).text();
-  assert.match(still2d, /"display2d":\s*"2"/);
+  const original3d = /"display2d":\s*"1"/.test(page);
+  const setMode = async enabled => {
+    const result = await (await fetch(origin+'/api', {method:'POST', headers:{cookie}, body:new URLSearchParams({action:'change_version',version:String(enabled)})})).json();
+    assert.equal(result.status, true);
+    return (await (await fetch(origin+'/map-revolution', {headers:{cookie}})).text());
+  };
+  assert.match(await setMode(false), /"display2d":\s*"2"/);
+  assert.match(await setMode(true), /"display2d":\s*"1"/);
+  await setMode(original3d);
   const id = Number(page.match(/"userID":\s*"(\d+)"/)[1]);
   const session = page.match(/"sessionID":\s*"([^"]+)"/)[1];
   await gameLogin(loginPacket(id, 'invalid-session'), false);
@@ -71,5 +77,5 @@ function gameLogin(packet, expectShip) {
   const swf = await fetch(origin+'/spacemap/main.swf');
   assert.equal(swf.status, 200);
   assert.ok((await swf.arrayBuffer()).byteLength > 3000000);
-  console.log('PASS: private paths, rejected password/session, web login, enforced 2D, ship and PET initialization, SWF assets.');
+  console.log('PASS: private paths, rejected password/session, 2D/3D persistence, ship and PET initialization, SWF assets.');
 })().catch(error => { console.error(error); process.exitCode=1; });

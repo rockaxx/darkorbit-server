@@ -13,7 +13,7 @@ namespace Ow.Net
     class GameServer
     {
         public static ManualResetEvent allDone = new ManualResetEvent(false);
-        public static int Port = 8080;
+        public static int Port = EnvironmentConfig.GetPort("DO_GAME_PORT", 8080);
 
         public static void StartListening()
         {
