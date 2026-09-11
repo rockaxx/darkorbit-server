@@ -31,6 +31,8 @@ function Wait-LocalPort($port, $name) {
 }
 Start-LocalProcess 'db' "$local/mariadb-10.11.16-winx64/bin/mariadbd.exe" @('--defaults-file="'+$local+'/db/my.ini"','--console') $local
 Wait-LocalPort 3307 'MariaDB'
+& "$local/php/php.exe" "$PSScriptRoot/apply-elite-defaults.php"
+if ($LASTEXITCODE -ne 0) { throw 'Elite equipment defaults migration failed.' }
 $env:DO_DB_PORT='3307'
 $env:DO_DB_NAME='darkorbit_local'
 $env:DO_DB_PASSWORD=$secrets.dbPassword

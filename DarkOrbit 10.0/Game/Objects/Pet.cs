@@ -27,6 +27,8 @@ namespace Ow.Game.Objects
 
         public bool Activated = false;
         public bool GuardModeActive = false;
+        public bool KamikazeArmed = false;
+        public DateTime KamikazeCooldownUntil = DateTime.MinValue;
         public short GearId = PetGearTypeModule.PASSIVE;
 
         public Pet(Player player) : base(Randoms.CreateRandomID(), "P.E.T 15", player.FactionId, GameManager.GetShip(22), player.Position, player.Spacemap, player.Clan)
@@ -48,9 +50,63 @@ namespace Ow.Game.Objects
             {
                 CheckShieldPointsRepair();
                 CheckGuardMode();
+                CheckKamikaze();
                 CheckAutoLoot();
                 Follow(Owner);
                 Movement.ActualPosition(this);
+            }
+        }
+
+        private void CheckKamikaze()
+        {
+            var now = DateTime.Now;
+            var inCombat = Owner.AttackingOrUnderAttack(5) || LastCombatTime.AddSeconds(5) >= now;
+            if (!PetKamikazePolicy.ShouldTrigger(KamikazeArmed, Activated, inCombat,
+                Owner.CurrentHitPoints, Owner.MaxHitPoints, CurrentHitPoints, MaxHitPoints,
+                now, KamikazeCooldownUntil)) return;
+
+            KamikazeArmed = false;
+            KamikazeCooldownUntil = now.Add(PetKamikazePolicy.Cooldown);
+            Owner.Settings.Cooldowns["pet_kamikaze"] = KamikazeCooldownUntil.ToString("yyyy-MM-dd HH:mm:ss");
+            QueryManager.SavePlayer.Settings(Owner, "cooldowns", Owner.Settings.Cooldowns);
+            Owner.SendPacket($"0|n|KAM|{Id}");
+            SendPacketToInRangePlayers($"0|n|KAM|{Id}");
+
+            foreach (var target in InRangeCharacters.Values.ToList())
+                ApplyKamikazeDamage(target);
+
+            Owner.SendCommand(PetGearAddCommand.write(new PetGearTypeModule(PetGearTypeModule.KAMIKAZE), 1, 0, false));
+            GearId = PetGearTypeModule.PASSIVE;
+            Destroyed = true;
+            Deactivate(true, true);
+        }
+
+        private void ApplyKamikazeDamage(Character target)
+        {
+            if (target == null || target.Destroyed || target.Invincible ||
+                (!(target is Player) && !(target is Npc)) ||
+                !PetKamikazePolicy.IsInBlastRadius(Position.DistanceTo(target.Position)) ||
+                !Owner.TargetDefinition(target, false) ||
+                (target is Player && !(target as Player).Attackable())) return;
+
+            var damage = PetKamikazePolicy.Damage;
+            var shieldDamage = Math.Min(target.CurrentShieldPoints, (int)(damage * target.ShieldAbsorption));
+            var hitpointDamage = Math.Min(target.CurrentHitPoints, damage - shieldDamage);
+            var hitCommand = AttackHitCommand.write(new AttackTypeModule(AttackTypeModule.KAMIKAZE),
+                Id, target.Id, target.CurrentHitPoints, target.CurrentShieldPoints,
+                target.CurrentNanoHull, damage, false);
+            Owner.SendCommand(hitCommand);
+            foreach (var viewer in InRangeCharacters.Values.OfType<Player>().Where(player => player != Owner))
+                viewer.SendCommand(hitCommand);
+
+            target.CurrentShieldPoints -= shieldDamage;
+            if (hitpointDamage >= target.CurrentHitPoints)
+                target.Destroy(Owner, DestructionType.PET);
+            else
+            {
+                target.CurrentHitPoints -= hitpointDamage;
+                target.LastCombatTime = DateTime.Now;
+                target.UpdateStatus();
             }
         }
 
@@ -253,9 +309,11 @@ namespace Ow.Game.Objects
 
         private void Initialization(short gearId = PetGearTypeModule.PASSIVE)
         {
+            LoadKamikazeCooldown();
             Owner.SendCommand(PetStatusCommand.write(Id, 15, 27000000, 27000000, CurrentHitPoints, MaxHitPoints, CurrentShieldPoints, MaxShieldPoints, 50000, 50000, Speed, Name));
             Owner.SendCommand(PetGearAddCommand.write(new PetGearTypeModule(PetGearTypeModule.PASSIVE), 0, 0, true));
             Owner.SendCommand(PetGearAddCommand.write(new PetGearTypeModule(PetGearTypeModule.GUARD), 0, 0, true));
+            Owner.SendCommand(PetGearAddCommand.write(new PetGearTypeModule(PetGearTypeModule.KAMIKAZE), 1, 0, DateTime.Now >= KamikazeCooldownUntil));
             SwitchGear(gearId);
         }
 
@@ -277,18 +335,40 @@ namespace Ow.Game.Objects
             if (!Activated)
                 Activate();
 
+            LoadKamikazeCooldown();
+
             switch (gearId)
             {
                 case PetGearTypeModule.PASSIVE:
                     GuardModeActive = false;
+                    KamikazeArmed = false;
                     break;
                 case PetGearTypeModule.GUARD:
                     GuardModeActive = true;
+                    KamikazeArmed = false;
+                    break;
+                case PetGearTypeModule.KAMIKAZE:
+                    if (DateTime.Now < KamikazeCooldownUntil)
+                    {
+                        Owner.SendPacket("0|A|STM|ttip_pet_kamikaze-gear_cooldown");
+                        return;
+                    }
+                    GuardModeActive = false;
+                    KamikazeArmed = true;
                     break;
             }
             GearId = gearId;
 
             Owner.SendCommand(PetGearSelectCommand.write(new PetGearTypeModule(gearId), new List<int>()));
+        }
+
+        private void LoadKamikazeCooldown()
+        {
+            string value;
+            DateTime stored;
+            if (Owner.Settings.Cooldowns.TryGetValue("pet_kamikaze", out value) &&
+                DateTime.TryParse(value, out stored) && stored > KamikazeCooldownUntil)
+                KamikazeCooldownUntil = stored;
         }
 
         public override byte[] GetShipCreateCommand() { return null; }

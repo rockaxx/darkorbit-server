@@ -186,11 +186,8 @@ namespace Ow.Chat
                 if (gameSession.Player.Storage.IsInEquipZone && inviterPlayer.Storage.IsInEquipZone)
                 {
                     gameSession.Player.Storage.DuelInvites.TryRemove(duelId, out inviterPlayer);
-                    var players = new ConcurrentDictionary<int, Player>();
-                    players.TryAdd(gameSession.Player.Id, gameSession.Player);
-                    players.TryAdd(inviterPlayer.Id, inviterPlayer);
-
-                    new Duel(players);
+                    if (!Duel.TryCreate(gameSession.Player, inviterPlayer))
+                        Send($"dq%The duel could not be started.#");
                 }
             }          
         }

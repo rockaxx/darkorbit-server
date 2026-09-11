@@ -275,7 +275,8 @@ namespace Ow.Game.Objects.Players.Managers
                 { TechManager.TECH_CHAIN_IMPULSE, "" },
                 { TechManager.TECH_PRECISION_TARGETER, "" },
                 { TechManager.TECH_BACKUP_SHIELDS, "" },
-                { TechManager.TECH_BATTLE_REPAIR_BOT, "" }
+                { TechManager.TECH_BATTLE_REPAIR_BOT, "" },
+                { "pet_kamikaze", "" }
         };
 
         public List<BoundKeysBase> BoundKeys = new List<BoundKeysBase>

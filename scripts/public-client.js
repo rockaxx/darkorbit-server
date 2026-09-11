@@ -17,6 +17,7 @@ app.whenReady().then(async () => {
   window = new BrowserWindow({ width: 1280, height: 900, title: 'DarkOrbit', webPreferences: { preload: path.join(__dirname, 'client-tabs-preload.js'), contextIsolation: true, nodeIntegration: false } });
   const views = {};
   let active = 'home';
+  let chromeHeight = 48;
   let gameForce2D = null;
   const gameUrl = () => transport.origin + '/map-revolution?clientReload=' + Date.now();
   async function closeGameTab(view) {
@@ -79,9 +80,20 @@ app.whenReady().then(async () => {
     window.setBrowserView(views[tab]); active = tab;
     resize(); window.webContents.send('active-tab', tab);
   }
-  function resize() { const [width, height] = window.getContentSize(); if (views[active]) views[active].setBounds({ x: 0, y: 48, width, height: Math.max(0, height - 48) }); }
+  function resize() { const [width, height] = window.getContentSize(); if (views[active]) views[active].setBounds({ x: 0, y: chromeHeight, width, height: Math.max(0, height - chromeHeight) }); }
   ipcMain.on('select-tab', (event, tab) => { if (event.sender === window.webContents) select(tab); });
   ipcMain.on('open-hangar', event => { if (event.sender === window.webContents) { select('home'); views.home.webContents.loadURL(transport.origin + '/equipment'); } });
+  ipcMain.on('arena-open', (event, open) => { if (event.sender === window.webContents) { chromeHeight = open ? 250 : 48; resize(); } });
+  ipcMain.handle('arena-api', async (event, payload) => {
+    if (event.sender !== window.webContents || !views.home) return {status: false, message: 'Klient nie je pripravený.'};
+    const request = {action: String(payload.action || '')};
+    if (payload.nickname != null) request.nickname = String(payload.nickname);
+    if (payload.inviteId != null) request.inviteId = String(payload.inviteId);
+    return views.home.webContents.executeJavaScript(`fetch('/arena-api.php', {
+      method: 'POST', credentials: 'same-origin', headers: {'Content-Type':'application/x-www-form-urlencoded'},
+      body: new URLSearchParams(${JSON.stringify(request)})
+    }).then(response => response.json())`);
+  });
   window.on('resize', resize);
   window.on('closed', () => { for (const view of Object.values(views)) view.webContents.destroy(); });
   Menu.setApplicationMenu(Menu.buildFromTemplate([{ label: 'Klient', submenu: [

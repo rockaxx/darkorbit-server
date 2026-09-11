@@ -199,6 +199,7 @@ namespace Ow.Game.Objects
 
             if (this is Player player)
             {
+                var duelDeath = Duel.InDuel(player);
                 if (EventManager.JackpotBattle.InEvent(player))
                     GameManager.SendPacketToMap(EventManager.JackpotBattle.Spacemap.Id, $"0|A|STM|msg_jackpot_players_left|%COUNT%|{(EventManager.JackpotBattle.Spacemap.Characters.Count - 1)}");
 
@@ -211,7 +212,8 @@ namespace Ow.Game.Objects
                 player.DisableAttack(player.Settings.InGameSettings.selectedLaser);
                 player.CurrentInRangePortalId = -1;
                 player.Storage.InRangeAssets.Clear();
-                player.KillScreen(destroyer, destructionType);
+                if (!duelDeath)
+                    player.KillScreen(destroyer, destructionType);
             }
             else if (this is BattleStation battleStation)
             {

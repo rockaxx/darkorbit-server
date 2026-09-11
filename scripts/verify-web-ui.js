@@ -36,7 +36,7 @@ const password = crypto.randomBytes(12).toString('hex');
     await page.click('#register button');
     const registration = await (await registered).json();
     console.log('Registration response:',registration.message);
-    assert.match(registration.message, /created/i, 'Registration works through the redesigned form');
+    assert.match(registration.message, /(created|successfully registered)/i, 'Registration works through the redesigned form');
     await page.click('.tabs a[href="#login"]');
     await page.waitForSelector('#l-username', {visible:true});
     await page.type('#l-username',username);

@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Ow.Chat;
 using Ow.Game;
+using Ow.Game.Events;
 using Ow.Game.Objects;
 using Ow.Game.Objects.Players.Managers;
 using Ow.Managers;
@@ -159,6 +160,12 @@ class SocketServer
                 break;
             case "KickPlayer":
                 KickPlayer(GameManager.GetPlayerById(Int(parameters["UserId"])), String(parameters["Reason"]));
+                break;
+            case "CanStartDuel":
+                Send(handler, Duel.CanCreate(GameManager.GetPlayerById(Int(parameters["InviterId"])), GameManager.GetPlayerById(Int(parameters["InviteeId"]))).ToString());
+                break;
+            case "StartDuel":
+                Send(handler, Duel.TryCreate(GameManager.GetPlayerById(Int(parameters["InviterId"])), GameManager.GetPlayerById(Int(parameters["InviteeId"]))).ToString());
                 break;
         }
     }

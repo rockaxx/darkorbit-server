@@ -1,0 +1,17 @@
+#arena-ui{position:fixed;top:14px;right:16px;z-index:2147483647;font:14px "Segoe UI",Arial,sans-serif;color:#dcecff;pointer-events:none}
+#arena-ui button,#arena-ui input{font:inherit}
+#arena-toggle{pointer-events:auto;border:1px solid #35bdf2;border-radius:4px;background:linear-gradient(#18364b,#0b1d2b);color:#fff;padding:9px 15px;font-weight:700;box-shadow:0 0 14px #079fd766;cursor:pointer}
+#arena-panel{pointer-events:auto;width:310px;margin-top:8px;padding:13px;border:1px solid #278ab4;border-radius:5px;background:#091621f2;box-shadow:0 8px 32px #000b}
+#arena-panel[aria-hidden="true"]{display:none}
+#arena-panel header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;color:#62d7ff;font-size:16px}
+#arena-close{border:0;background:transparent;color:#9cc8da;font-size:24px;line-height:18px;cursor:pointer}
+#arena-form label{display:block;margin-bottom:5px;color:#9cb9c8}
+#arena-form>div,#arena-invite>div{display:flex;gap:7px}
+#arena-nickname{min-width:0;flex:1;border:1px solid #31576b;border-radius:3px;background:#02090e;color:#fff;padding:8px;outline:none}
+#arena-nickname:focus{border-color:#38c8ff}
+#arena-form button,#arena-accept,#arena-decline{border:1px solid #2da7d5;border-radius:3px;background:#14658a;color:#fff;padding:7px 11px;cursor:pointer}
+#arena-decline{border-color:#8b4850;background:#632d34}
+#arena-invite{margin-top:12px;padding:10px;border:1px solid #826b2b;background:#2b240f}
+#arena-invite p{margin:0 0 9px}
+#arena-status{min-height:18px;margin:10px 0 0;color:#9db3bd}
+#arena-status.ok{color:#73e6a1}#arena-status.error{color:#ff8181}

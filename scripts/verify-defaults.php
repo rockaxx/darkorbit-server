@@ -12,6 +12,7 @@ try {
     $account = $db->query("SELECT * FROM player_accounts WHERE userId=$id")->fetch_assoc();
     $equipment = $db->query("SELECT * FROM player_equipment WHERE userId=$id")->fetch_assoc();
     $items = json_decode($equipment['items'], true);
+    $boosters = json_decode($equipment['boosters'], true);
     check((int)$account['version'] === 0, 'New accounts must use 2D');
     check($items['lf4Count'] === 50, 'New accounts must own 50 LF-4');
     check($items['apis'] && $items['zeus'] && $items['pet'], 'Elite drones and PET must be owned');
@@ -24,5 +25,7 @@ try {
         foreach ($drones as $drone) { check(count($drone['items']) === 2 && count($drone['designs']) === 1, 'Drone slots must be filled'); }
     }
     check(json_decode($equipment['skill_points'], true)['engineering'] === 5, 'Pilot skills must be maxed');
-    echo "PASS: new account defaults are 2D, full inventory, equipped configurations, max skills.\n";
+    check(count($boosters['2']) === 3 && count($boosters['3']) === 1 && count($boosters['7']) === 2, 'Elite damage, shield and HP boosters must be present');
+    foreach ($boosters as $entries) { foreach ($entries as $booster) { check($booster['Seconds'] === -1, 'Elite boosters must be permanent'); } }
+    echo "PASS: new account defaults are 2D, LV16 elite inventory, permanent boosters, equipped configurations, max skills.\n";
 } finally { $db->rollback(); }

@@ -40,6 +40,9 @@ namespace Ow.Game.Objects.Players.Managers
 
                     for (short k = 0; k < boosters.Count; k++)
                     {
+                        if (boosters[k].Seconds < 0)
+                            continue;
+
                         boosters[k].Seconds -= 5;
 
                         if (boosters[k].Seconds <= 0)
@@ -48,6 +51,30 @@ namespace Ow.Game.Objects.Players.Managers
                 }
                 boosterTime = DateTime.Now;
             }
+        }
+
+        public void EnsureEliteBoosters()
+        {
+            EnsurePermanentBooster(BoostedAttributeType.DAMAGE, BoosterType.DMG_B01);
+            EnsurePermanentBooster(BoostedAttributeType.DAMAGE, BoosterType.DMG_B02);
+            EnsurePermanentBooster(BoostedAttributeType.DAMAGE, BoosterType.DMGM_1);
+            EnsurePermanentBooster(BoostedAttributeType.SHIELD, BoosterType.SHD_B01);
+            EnsurePermanentBooster(BoostedAttributeType.MAXHP, BoosterType.HP_B01);
+            EnsurePermanentBooster(BoostedAttributeType.MAXHP, BoosterType.HP_B02);
+        }
+
+        private void EnsurePermanentBooster(BoostedAttributeType attribute, BoosterType boosterType)
+        {
+            var attributeId = (short)attribute;
+            var typeId = (short)boosterType;
+            if (!Boosters.ContainsKey(attributeId))
+                Boosters[attributeId] = new List<BoosterBase>();
+
+            var existing = Boosters[attributeId].FirstOrDefault(booster => booster.Type == typeId);
+            if (existing == null)
+                Boosters[attributeId].Add(new BoosterBase(typeId, -1));
+            else
+                existing.Seconds = -1;
         }
 
         public void Add(BoosterType boosterType, int hours)
@@ -181,6 +208,9 @@ namespace Ow.Game.Objects.Players.Managers
                 case BoosterTypeModule.EP_B01:
                 case BoosterTypeModule.EP_B02:
                     percentage = 10;
+                    break;
+                case BoosterTypeModule.DMGM_1:
+                    percentage = 5;
                     break;
                 case BoosterTypeModule.SHD_B01:
                 case BoosterTypeModule.SHD_B02:

@@ -186,6 +186,7 @@ namespace Ow.Managers
                     foreach (DataRow row in equipment.Rows)
                     {
                         player.BoosterManager.Boosters = JsonConvert.DeserializeObject<Dictionary<short, List<BoosterBase>>>(row["boosters"].ToString());
+                        player.BoosterManager.EnsureEliteBoosters();
                         player.Storage.BattleStationModules = JsonConvert.DeserializeObject<List<ModuleBase>>(row["modules"].ToString());
                         player.SkillTree = JsonConvert.DeserializeObject<SkillTreeBase>(row["skill_points"].ToString());
 
@@ -212,8 +213,12 @@ namespace Ow.Managers
             try
             {
                 var lf3Damage = 150;
-                var lf4Damage = 200;
-                var bo2Shield = 15000;
+                const int Lf4Level16Damage = 212;
+                const int Bo2Level16Shield = 15900;
+                const int DroneLevel16DamageBonusPercent = 16;
+                const int DroneLevel16ShieldBonusPercent = 26;
+                var lf4Damage = Lf4Level16Damage;
+                var bo2Shield = Bo2Level16Shield;
                 var g3nSpeed = 10;
 
                 var hitpoints = new int[] { player.Ship.BaseHitpoints + 60000, player.Ship.BaseHitpoints + 60000 };
@@ -267,14 +272,14 @@ namespace Ow.Managers
                                     }
                                 }
 
-                                var droneShield = bo2Shield + 2000;
+                                var droneShield = bo2Shield + Maths.GetPercentage(bo2Shield, DroneLevel16ShieldBonusPercent);
 
                                 foreach (int item in drone["items"])
                                 {
                                     if (item >= 0 && item < 40)
-                                        damage[i - 1] += lf3Damage + 15;
+                                        damage[i - 1] += lf3Damage + Maths.GetPercentage(lf3Damage, DroneLevel16DamageBonusPercent);
                                     else if (item >= 140)
-                                        damage[i - 1] += lf4Damage + 20;
+                                        damage[i - 1] += lf4Damage + Maths.GetPercentage(lf4Damage, DroneLevel16DamageBonusPercent);
                                     else if (item >= 40 && item < 100)
                                         shield[i - 1] += droneShield + (herculesEquipped ? +Maths.GetPercentage(droneShield, 15) : 0);
                                 }

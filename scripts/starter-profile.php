@@ -27,6 +27,11 @@ function starterProfile(mysqli $db): array {
             'config1_generators'=>array_merge(range(40,49),range(100,104)),
             'config2_generators'=>range(100,114),
             'config1_drones'=>$droneConfig(120), 'config2_drones'=>$droneConfig(130),
+            'boosters'=>[
+                2=>[['Type'=>0,'Seconds'=>-1],['Type'=>1,'Seconds'=>-1],['Type'=>26,'Seconds'=>-1]],
+                3=>[['Type'=>15,'Seconds'=>-1]],
+                7=>[['Type'=>8,'Seconds'=>-1],['Type'=>9,'Seconds'=>-1]],
+            ],
             'items'=>['lf4Count'=>50,'havocCount'=>10,'herculesCount'=>10,'apis'=>true,'zeus'=>true,'pet'=>true,
                 'petModules'=>[], 'ships'=>$ships,'designs'=>(object)$designs,
                 'skillTree'=>['logdisks'=>100000,'researchPoints'=>0,'resetCount'=>0]],

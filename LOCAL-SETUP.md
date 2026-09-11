@@ -14,7 +14,9 @@ Dvojklik na `Start-DarkOrbit.cmd` spusti databazu, herny server, web a samostatn
 
 Web: http://127.0.0.1/ . Prihlasovacie udaje su v `.local/credentials.json` (polozky `username` a `password`). Toto je lokalny testovaci server. Flash klient je pribaleny v samostatnom okne, bezny moderny prehliadac staci na webovy hangar a login.
 
-Testovaci aj novy ucet ma Goliath, MMO, premium, 1 miliardu uridia aj kreditov, 50 LF-4, 60 BO2, 20 rychlostnych generatorov, 8 Iris + Apis + Zeus, 10 Havoc a 10 Hercules, PET, odomknute podporovane lode a ich dizajny a maximalne pilotne schopnosti. Obe konfiguracie su vybavene: prva kombinuje stity a rychlost s Havoc, druha ma rychlost a Hercules. Municia sa v povodnom emulatore neodpocitava; platia iba casove odstupy strelby a schopnosti. Formacie a implementovane techniky su dostupne bez nakupu.
+Testovaci aj novy ucet ma Goliath, MMO, premium, 1 miliardu uridia aj kreditov, 50 LF-4, 60 BO2, 20 rychlostnych generatorov, 8 Iris + Apis + Zeus, 10 Havoc a 10 Hercules, PET, odomknute podporovane lode a ich dizajny a maximalne pilotne schopnosti. LF-4, BO2, Iris, Apis a Zeus su level 16; permanentne boostre davaju +25 % damage, +25 % shield a +20 % HP. Obe konfiguracie su vybavene: prva kombinuje stity a rychlost s Havoc, druha ma rychlost a Hercules. Municia sa v povodnom emulatore neodpocitava; platia iba casove odstupy strelby a schopnosti. Formacie a implementovane techniky su dostupne bez nakupu.
+
+Na hernej mape je vpravo hore `1v1 Arena`. Zadaj presny nick online hraca; superovi pride pozvanka s tlacidlami Prijat/Odmietnut. Po prijati hra vyberie volnu izolovanu arena mapu, spusti 25-sekundovu ochranu a po skonceni vrati pripojenych hracov na povodne miesto s plnym HP a stitmi. Pozvanka vyprsi po 60 sekundach.
 
 Grafika je napevno 2D. Prepinac 3D je odstraneny a API ho nemoze zapnut. `scripts/starter-profile.php` definuje vychodzi profil. `scripts/seed-starter.php` nastavi databazove defaulty pre nove ucty a resetuje testovaci ucet; pri beznom starte sa nespusta. PET ma rezimy, ktore podporuje povodny emulator (pasivny a ochranny).
 
