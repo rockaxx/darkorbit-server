@@ -25,7 +25,8 @@ try {
         foreach ($drones as $drone) { check(count($drone['items']) === 2 && count($drone['designs']) === 1, 'Drone slots must be filled'); }
     }
     check(json_decode($equipment['skill_points'], true)['engineering'] === 5, 'Pilot skills must be maxed');
-    check(count($boosters['2']) === 3 && count($boosters['3']) === 1 && count($boosters['7']) === 2, 'Elite damage, shield and HP boosters must be present');
+    check(count($boosters['2']) === 3 && count($boosters['3']) === 2 && count($boosters['7']) === 2, 'Elite damage, both shield and HP boosters must be present');
+    check(array_column($boosters['3'], 'Type') === [15, 16], 'SHD-B01 and SHD-B02 must both be present');
     foreach ($boosters as $entries) { foreach ($entries as $booster) { check($booster['Seconds'] === -1, 'Elite boosters must be permanent'); } }
     echo "PASS: new account defaults are 2D, LV16 elite inventory, permanent boosters, equipped configurations, max skills.\n";
 } finally { $db->rollback(); }

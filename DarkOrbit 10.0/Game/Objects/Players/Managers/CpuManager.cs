@@ -17,6 +17,7 @@ namespace Ow.Game.Objects.Players.Managers
         public const String AUTO_HELLSTROM_CPU = "equipment_extra_cpu_rllb-x";
         public const String ROCKET_LAUNCHER = "equipment_weapon_rocketlauncher_hst-2";
         public const String GALAXY_JUMP_CPU = "equipment_extra_cpu_jp-02";
+        public const String AIM_CPU = "equipment_extra_cpu_aim-02";
 
         public int CloakCooldownTime => Player.Premium ? 10000 : 20000;
         private const int CLOAK_PRICE = 256;
@@ -55,6 +56,15 @@ namespace Ow.Game.Objects.Players.Managers
                 EnableRllbX();
             else
                 DisableRllbX();
+        }
+
+        public void AimCpu()
+        {
+            if (Player.Settings.InGameSettings.selectedCpus.Contains(AIM_CPU))
+                RemoveSelectedCpu(AIM_CPU);
+            else
+                AddSelectedCpu(AIM_CPU);
+            Player.SettingsManager.SendNewItemStatus(AIM_CPU);
         }
 
         public void EnableCloak()

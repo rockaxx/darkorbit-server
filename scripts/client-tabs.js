@@ -9,6 +9,17 @@ const arenaStatus = document.getElementById('arena-shell-status');
 const arenaName = document.getElementById('arena-shell-name');
 let arenaInviteId = 0;
 let arenaPolling = false;
+async function leaderboard() {
+  const result = await window.clientTabs.arena({action: 'leaderboard'});
+  const list = document.getElementById('arena-shell-leaderboard');
+  list.textContent = '';
+  const entries = result.leaderboard.length ? result.leaderboard : [{pilotName: 'Zatiaľ bez výsledkov', wins: 0, losses: 0}];
+  entries.forEach(entry => {
+    const item = document.createElement('li');
+    item.textContent = `${entry.pilotName} — ${entry.wins}W / ${entry.losses}L`;
+    list.appendChild(item);
+  });
+}
 function setArenaOpen(open) { arenaShell.hidden = !open; window.clientTabs.arenaOpen(open); }
 function arenaFeedback(message, good) { arenaStatus.textContent = message || ''; arenaStatus.className = good ? 'ok' : 'error'; }
 document.getElementById('arena-button').onclick = () => setArenaOpen(arenaShell.hidden);
@@ -41,4 +52,6 @@ async function pollArena() {
   finally { arenaPolling = false; }
 }
 setInterval(pollArena, 1000);
+setInterval(() => leaderboard().catch(() => {}), 10000);
 pollArena();
+leaderboard().catch(() => {});

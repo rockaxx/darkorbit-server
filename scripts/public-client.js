@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { startTransport } = require('./client-transport');
 const { readForce2D, findLatestSol, resolveGameCloseAction } = require('./flash-display-mode');
+const { nextZoomFactor } = require('./client-zoom');
 app.setPath('userData', path.join(app.getPath('appData'), 'DarkOrbit-Tunnel-Client'));
 fs.mkdirSync(app.getPath('userData'), { recursive: true });
 const serverFile = path.join(__dirname, 'server.txt');
@@ -61,6 +62,16 @@ app.whenReady().then(async () => {
         else if (tab === 'home' && url.includes('/map-revolution')) { event.preventDefault(); select('game'); }
       });
       view.webContents.on('did-fail-load', (_event, code, message) => log(`Page failed ${code}: ${message}`));
+      view.webContents.on('before-input-event', (event, input) => {
+        if (tab !== 'game' || input.type !== 'mouseWheel' || !input.control) return;
+        const current = view.webContents.getZoomFactor();
+        const next = nextZoomFactor(current, input.deltaY, input.control, gameForce2D === true);
+        if (next !== current) {
+          event.preventDefault();
+          view.webContents.setZoomFactor(next);
+          log(`2D zoom changed to ${next.toFixed(1)}`);
+        }
+      });
       view.webContents.on('did-finish-load', async () => {
         if (tab !== 'game') return;
         try {

@@ -4,6 +4,7 @@ using Ow.Game.Objects.Mines;
 using Ow.Game.Ticks;
 using Ow.Managers;
 using Ow.Net.netty.commands;
+using Ow.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -41,6 +42,7 @@ namespace Ow.Game.Events
 
         private readonly Dictionary<int, Player> participants;
         private readonly Dictionary<int, ReturnLocation> ReturnLocations;
+        private readonly POI arenaBoundary;
         private int finished;
 
         private Duel(Player first, Player second, int arenaMapId)
@@ -51,12 +53,20 @@ namespace Ow.Game.Events
             Players.TryAdd(second.Id, second);
             participants = Players.ToDictionary(entry => entry.Key, entry => entry.Value);
             ReturnLocations = participants.ToDictionary(entry => entry.Key, entry => new ReturnLocation(entry.Value));
+            arenaBoundary = new POI("duel_square_" + arenaMapId, POITypes.CAGE, POIDesigns.SIMPLE,
+                POIShapes.RECTANGLE, new List<Position> {
+                    new Position(DuelPolicy.ArenaMinX, DuelPolicy.ArenaMinY),
+                    new Position(DuelPolicy.ArenaMaxX, DuelPolicy.ArenaMinY),
+                    new Position(DuelPolicy.ArenaMaxX, DuelPolicy.ArenaMaxY),
+                    new Position(DuelPolicy.ArenaMinX, DuelPolicy.ArenaMaxY)
+                }, true, false);
 
             var ordered = participants.Values.OrderBy(player => player.Id).ToArray();
             foreach (var player in ordered)
             {
                 player.Storage.Duel = this;
                 player.CpuManager.DisableCloak();
+                player.SkillManager.DisableAllSkills();
                 player.AddVisualModifier(VisualModifierCommand.CAMERA, 0, "", 0, true);
             }
             ordered[0].Jump(ArenaMap.Id, Position1);
@@ -91,6 +101,12 @@ namespace Ow.Game.Events
         private async void StartCountdown()
         {
             await Task.Delay(Portal.JUMP_DELAY + 250);
+            foreach (var player in Players.Values)
+            {
+                if (ArenaMap.Id == 101) player.SendCommand(MapRemovePOICommand.write("jackpot_poi"));
+                player.SendCommand(arenaBoundary.GetPOICreateCommand());
+                player.SendPacket("0|A|STM|1v1: PET je povoleny, schopnosti lode su vypnute.");
+            }
             for (var seconds = DuelPolicy.CountdownSeconds; seconds > 0 && Volatile.Read(ref finished) == 0; seconds--)
             {
                 foreach (var player in Players.Values)
@@ -107,6 +123,12 @@ namespace Ow.Game.Events
 
         public void Tick()
         {
+            foreach (var player in Players.Values)
+            {
+                var position = Movement.ActualPosition(player);
+                if (!DuelPolicy.IsInsideArena(position.X, position.Y))
+                    player.SetPosition(new Position(DuelPolicy.ClampArenaX(position.X), DuelPolicy.ClampArenaY(position.Y)));
+            }
             if (Players.Count <= 1) Finish();
         }
 
@@ -117,6 +139,18 @@ namespace Ow.Game.Events
             PeaceArea = true;
 
             var winner = Players.Values.FirstOrDefault(player => player.GameSession != null);
+            var loser = participants.Values.FirstOrDefault(player => winner == null || player.Id != winner.Id);
+            if (winner != null && loser != null)
+            {
+                try
+                {
+                    QueryManager.RecordDuelResult(winner.Id, loser.Id);
+                }
+                catch (Exception error)
+                {
+                    Logger.Log("error_log", $"- [Duel.cs] RecordDuelResult failed: {error}");
+                }
+            }
             if (winner != null)
                 winner.SendPacket("0|n|KSMSG|label_traininggrounds_results_victory");
             foreach (var participant in participants.Values.Where(player => winner == null || player.Id != winner.Id))
@@ -129,6 +163,7 @@ namespace Ow.Game.Events
                 foreach (var mine in ArenaMap.Objects.Values.OfType<Mine>().Where(mine => mine.Player == participant).ToList())
                     mine.Remove(true);
                 participant.RemoveVisualModifier(VisualModifierCommand.CAMERA);
+                participant.SendCommand(MapRemovePOICommand.write(arenaBoundary.Id));
                 participant.DisableAttack(participant.Settings.InGameSettings.selectedLaser);
                 if (participant.Storage.Duel == this) participant.Storage.Duel = null;
 

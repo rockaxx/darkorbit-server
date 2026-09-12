@@ -482,6 +482,8 @@ namespace Ow.Game.Objects
 
                 if (Storage.PrecisionTargeter)
                     value = 0;
+                else if (Settings.InGameSettings.selectedCpus.Contains(CpuManager.AIM_CPU))
+                    value *= 0.5;
 
                 return value;
             }
@@ -531,6 +533,7 @@ namespace Ow.Game.Objects
         {
             CurrentConfig = Convert.ToInt32(pCurrentConfiguration);
             Settings.InGameSettings.currentConfig = CurrentConfig;
+            QueryManager.SetEquipment(this);
             DroneManager.UpdateDrones();
             UpdateStatus();
         }

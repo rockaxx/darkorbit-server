@@ -380,7 +380,7 @@ namespace Ow.Game.Objects.Players.Managers
                 CpuManager.ROCKET_LAUNCHER, AmmunitionManager.HSTRM_01,
                 //"ammunition_rocketlauncher_ubr-100",
                 //"ammunition_rocketlauncher_eco-10", "ammunition_rocketlauncher_sar-01",
-                AmmunitionManager.SAR_02
+                AmmunitionManager.SAR_02, AmmunitionManager.CBR
             };
 
         public static string[] SpecialItemsCategory =
@@ -402,7 +402,7 @@ namespace Ow.Game.Objects.Players.Managers
 
         public static string[] CpusCategory =
         {
-            "equipment_extra_cpu_cl04k-xl", "equipment_extra_cpu_arol-x", "equipment_extra_cpu_rllb-x"
+            "equipment_extra_cpu_cl04k-xl", "equipment_extra_cpu_arol-x", "equipment_extra_cpu_rllb-x", CpuManager.AIM_CPU
               /**  "equipment_extra_cpu_aim-01", "equipment_extra_cpu_aim-02", "equipment_extra_cpu_ajp-01",
                 "equipment_extra_cpu_alb-x", "equipment_extra_cpu_anti-z1", "equipment_extra_cpu_anti-z1-xl",
                 "equipment_extra_cpu_arol-x", "equipment_extra_cpu_cl04k-m", "equipment_extra_cpu_cl04k-xl",
@@ -714,17 +714,7 @@ namespace Ow.Game.Objects.Players.Managers
             var lasersItems = new List<ClientUISlotBarCategoryItemModule>();
             foreach (string itemLootId in LaserCategory)
             {
-                var visible = true;
-
-                if (Player.RankId != 21)
-                {
-                    switch (itemLootId)
-                    {
-                        case AmmunitionManager.CBO_100:
-                            visible = false;
-                            break;
-                    }
-                }
+                var visible = AmmunitionVisibilityPolicy.IsLaserVisible(itemLootId);
 
                 ClientUISlotBarCategoryItemTimerModule categoryTimerModule =
                         new ClientUISlotBarCategoryItemTimerModule(GetCooldownTime(itemLootId),
@@ -894,6 +884,8 @@ namespace Ow.Game.Objects.Players.Managers
                     return "ttip_arol_cpu";
                 case CpuManager.AUTO_HELLSTROM_CPU:
                     return "ttip_rllb_cpu";
+                case CpuManager.AIM_CPU:
+                    return "ttip_aim_cpu";
                 default:
                     return "";
             }
@@ -1890,6 +1882,11 @@ namespace Ow.Game.Objects.Players.Managers
             }
             else if (AbilitiesCategory.Contains(pItemId))
             {
+                if (!DuelPolicy.CanUseShipAbility(Duel.InDuel(Player)))
+                {
+                    Player.SendPacket("0|A|STM|Schopnosti lode su v 1v1 arene vypnute.");
+                    return;
+                }
                 if (Player.Storage.Skills.ContainsKey(pItemId))
                     Player.Storage.Skills[pItemId].Send();
             }
@@ -1914,6 +1911,9 @@ namespace Ow.Game.Objects.Players.Managers
                         break;
                     case CpuManager.AUTO_HELLSTROM_CPU:
                         Player.CpuManager.RllbX();
+                        break;
+                    case CpuManager.AIM_CPU:
+                        Player.CpuManager.AimCpu();
                         break;
                     case AmmunitionManager.SLM_01:
                     case AmmunitionManager.EMPM_01:

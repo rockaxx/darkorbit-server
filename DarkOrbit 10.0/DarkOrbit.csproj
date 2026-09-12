@@ -112,6 +112,7 @@
     <Compile Include="Game\Objects\Pet.cs" />
     <Compile Include="Game\Objects\Players\Attacker.cs" />
     <Compile Include="Game\Objects\Players\Managers\BoosterManager.cs" />
+    <Compile Include="Game\Objects\Players\Managers\EliteBoosterPolicy.cs" />
     <Compile Include="Game\Objects\Players\RocketLauncher.cs" />
     <Compile Include="Game\Objects\POI.cs" />
     <Compile Include="Game\Objects\Portal.cs" />
@@ -126,6 +127,7 @@
     <Compile Include="Game\Movements\Position.cs" />
     <Compile Include="Game\Objects\Players\Managers\SkillManager.cs" />
     <Compile Include="Game\Objects\Players\Managers\AmmunitionManager.cs" />
+    <Compile Include="Game\Objects\Players\Managers\AmmunitionVisibilityPolicy.cs" />
     <Compile Include="Game\Objects\Players\Managers\DroneManager.cs" />
     <Compile Include="Game\Objects\Players\Managers\SettingsManager.cs" />
     <Compile Include="Game\Objects\Players\Managers\AttackManager.cs" />

@@ -58,7 +58,8 @@ namespace Ow.Game.Objects.Players.Managers
             EnsurePermanentBooster(BoostedAttributeType.DAMAGE, BoosterType.DMG_B01);
             EnsurePermanentBooster(BoostedAttributeType.DAMAGE, BoosterType.DMG_B02);
             EnsurePermanentBooster(BoostedAttributeType.DAMAGE, BoosterType.DMGM_1);
-            EnsurePermanentBooster(BoostedAttributeType.SHIELD, BoosterType.SHD_B01);
+            foreach (var boosterType in EliteBoosterPolicy.RequiredShieldBoosterTypes())
+                EnsurePermanentBooster(BoostedAttributeType.SHIELD, (BoosterType)boosterType);
             EnsurePermanentBooster(BoostedAttributeType.MAXHP, BoosterType.HP_B01);
             EnsurePermanentBooster(BoostedAttributeType.MAXHP, BoosterType.HP_B02);
         }

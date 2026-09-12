@@ -747,6 +747,7 @@ namespace Ow.Game.Objects.Players.Managers
                 case AmmunitionManager.HSTRM_01:
                 case AmmunitionManager.UBR_100:
                 case AmmunitionManager.SAR_02:
+                case AmmunitionManager.CBR:
                     return 4000;
                 default:
                     return 0;

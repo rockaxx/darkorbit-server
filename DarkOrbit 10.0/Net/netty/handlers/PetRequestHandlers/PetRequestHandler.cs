@@ -1,4 +1,5 @@
 ﻿using Ow.Game;
+using Ow.Game.Events;
 using Ow.Managers;
 using Ow.Net.netty.commands;
 using Ow.Net.netty.requests;
@@ -19,6 +20,7 @@ namespace Ow.Net.netty.handlers.PetRequestHandlers
 
             var player = gameSession.Player;
             if (player.Pet == null) return;
+            if (!DuelPolicy.CanUsePet(Duel.InDuel(player))) return;
 
             switch (read.petRequestType)
             {

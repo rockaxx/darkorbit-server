@@ -184,9 +184,10 @@ namespace Ow.Game.Objects
                     damageHp = target.CurrentHitPoints;
                 }
 
-                if (target is Player && !(target as Player).Attackable())
+                var targetProtected = target is Player && !(target as Player).Attackable();
+                var effectiveDamage = PetDamagePolicy.EffectiveDamage(Damage, targetProtected);
+                if (targetProtected)
                 {
-                    Damage = 0;
                     damageShd = 0;
                     damageHp = 0;
                 }
@@ -201,14 +202,14 @@ namespace Ow.Game.Objects
                 if (target is Player && (target as Player).Storage.Sentinel)
                     damageShd -= Maths.GetPercentage(damageShd, 30);
 
-                var laserRunCommand = AttackLaserRunCommand.write(Id, target.Id, Owner.AttackManager.GetSelectedLaser(), false, false);
+                var laserRunCommand = AttackLaserRunCommand.write(Id, target.Id, Owner.AttackManager.GetSelectedLaser(), false, true);
                 SendCommandToInRangePlayers(laserRunCommand);
 
                 var attackHitCommand =
                         AttackHitCommand.write(new AttackTypeModule(AttackTypeModule.LASER), Id,
                                              target.Id, target.CurrentHitPoints,
                                              target.CurrentShieldPoints, target.CurrentNanoHull,
-                                             Damage > damageShd ? Damage : damageShd, false);
+                                             effectiveDamage > damageShd ? effectiveDamage : damageShd, false);
 
                 SendCommandToInRangePlayers(attackHitCommand);
 

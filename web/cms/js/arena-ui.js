@@ -12,6 +12,7 @@
       '<div id="arena-invite" hidden><p><b id="arena-inviter"></b> ťa pozýva na 1v1.</p>',
       '<div><button id="arena-accept" type="button">Prijať</button><button id="arena-decline" type="button">Odmietnuť</button></div></div>',
       '<p id="arena-status" role="status"></p>',
+      '<div class="arena-ranking"><strong>Rebríček výhier</strong><ol id="arena-leaderboard"></ol></div>',
     '</section>'
   ].join('');
   document.body.appendChild(root);
@@ -23,6 +24,22 @@
   const nickname = document.getElementById('arena-nickname');
   let currentInviteId = 0;
   let polling = false;
+
+  async function leaderboard() {
+    const data = await request('leaderboard');
+    const list = document.getElementById('arena-leaderboard');
+    list.textContent = '';
+    data.leaderboard.forEach(entry => {
+      const item = document.createElement('li');
+      item.textContent = entry.pilotName + ' — ' + entry.wins + 'W / ' + entry.losses + 'L';
+      list.appendChild(item);
+    });
+    if (!data.leaderboard.length) {
+      const item = document.createElement('li');
+      item.textContent = 'Zatiaľ bez výsledkov';
+      list.appendChild(item);
+    }
+  }
 
   function showPanel(open) {
     panel.setAttribute('aria-hidden', open ? 'false' : 'true');
@@ -97,5 +114,7 @@
   document.getElementById('arena-accept').onclick = () => respond('accept');
   document.getElementById('arena-decline').onclick = () => respond('decline');
   setInterval(poll, 1000);
+  setInterval(() => leaderboard().catch(() => {}), 10000);
   poll();
+  leaderboard().catch(() => {});
 })();

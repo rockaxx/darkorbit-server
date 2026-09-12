@@ -8,6 +8,10 @@ namespace Ow.Game.Events
         public const int CountdownSeconds = 25;
         public const int FirstArenaMapId = 101;
         public const int LastArenaMapId = 111;
+        public const int ArenaMinX = 2500;
+        public const int ArenaMaxX = 7500;
+        public const int ArenaMinY = 1200;
+        public const int ArenaMaxY = 5200;
 
         public static bool CanInvite(int inviterId, int inviteeId, bool inviterOnline, bool inviteeOnline,
             bool inviterBusy, bool inviteeBusy)
@@ -25,5 +29,24 @@ namespace Ow.Game.Events
         {
             return mapId >= FirstArenaMapId && mapId <= LastArenaMapId;
         }
+
+        public static bool IsInsideArena(int x, int y)
+        {
+            return x >= ArenaMinX && x <= ArenaMaxX && y >= ArenaMinY && y <= ArenaMaxY;
+        }
+
+        public static int ClampArenaX(int x)
+        {
+            return Math.Max(ArenaMinX, Math.Min(ArenaMaxX, x));
+        }
+
+        public static int ClampArenaY(int y)
+        {
+            return Math.Max(ArenaMinY, Math.Min(ArenaMaxY, y));
+        }
+
+        public static bool CanUseShipAbility(bool inDuel) { return !inDuel; }
+
+        public static bool CanUsePet(bool inDuel) { return true; }
     }
 }

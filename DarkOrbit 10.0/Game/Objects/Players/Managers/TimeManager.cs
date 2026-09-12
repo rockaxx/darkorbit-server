@@ -13,7 +13,7 @@ namespace Ow.Game.Objects.Players.Managers
         public const int MIRRORED_CONTROL_DURATION = 5000;
 
         public const int WIZARD_DURATION = 15000;
-        public const int WIZARD_COOLDOWN = 60000;
+        public const int WIZARD_COOLDOWN = 10000;
 
         public const int FORMATION_COOLDOWN = 3000;
 
@@ -24,13 +24,13 @@ namespace Ow.Game.Objects.Players.Managers
         public const int EMP_DURATION = 3000;
 
         public const int R_IC3_DURATION = 2000;
-        public const int R_IC3_COOLDOWN = 60000;
+        public const int R_IC3_COOLDOWN = 40000;
 
         public const int DCR_250_DURATION = 5000;
-        public const int DCR_250_COOLDOWN = 60000;
+        public const int DCR_250_COOLDOWN = 25000;
 
         public const int PLD8_DURATION = 5000;
-        public const int PLD8_COOLDOWN = 60000;
+        public const int PLD8_COOLDOWN = 25000;
 
         public const int SLM_01_DURATION = 5000;
         public const int MINE_COOLDOWN = 25000;
@@ -71,10 +71,10 @@ namespace Ow.Game.Objects.Players.Managers
 
         public const int CHAIN_IMPULSE_COOLDOWN = 60000;
 
-        public const int ENERGY_LEECH_DURATION = 900000;
-        public const int ENERGY_LEECH_COOLDOWN = 900000;
+        public const int ENERGY_LEECH_DURATION = 3600000;
+        public const int ENERGY_LEECH_COOLDOWN = 5000;
 
-        public const int PRECISION_TARGETER_DURATION = 900000;
-        public const int PRECISION_TARGETER_COOLDOWN = 300000;
+        public const int PRECISION_TARGETER_DURATION = 3600000;
+        public const int PRECISION_TARGETER_COOLDOWN = 5000;
     }
 }

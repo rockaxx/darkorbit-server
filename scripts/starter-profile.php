@@ -26,14 +26,16 @@ function starterProfile(mysqli $db): array {
             'config1_lasers'=>range(140,154), 'config2_lasers'=>range(140,154),
             'config1_generators'=>array_merge(range(40,49),range(100,104)),
             'config2_generators'=>range(100,114),
+            'config1_pet_lasers'=>range(175,180), 'config2_pet_lasers'=>range(175,180),
+            'config1_pet_generators'=>range(50,61), 'config2_pet_generators'=>range(50,61),
             'config1_drones'=>$droneConfig(120), 'config2_drones'=>$droneConfig(130),
             'boosters'=>[
                 2=>[['Type'=>0,'Seconds'=>-1],['Type'=>1,'Seconds'=>-1],['Type'=>26,'Seconds'=>-1]],
-                3=>[['Type'=>15,'Seconds'=>-1]],
+                3=>[['Type'=>15,'Seconds'=>-1],['Type'=>16,'Seconds'=>-1]],
                 7=>[['Type'=>8,'Seconds'=>-1],['Type'=>9,'Seconds'=>-1]],
             ],
             'items'=>['lf4Count'=>50,'havocCount'=>10,'herculesCount'=>10,'apis'=>true,'zeus'=>true,'pet'=>true,
-                'petModules'=>[], 'ships'=>$ships,'designs'=>(object)$designs,
+                'petModules'=>[], 'petLasers'=>range(175,180), 'petShields'=>range(50,61), 'ships'=>$ships,'designs'=>(object)$designs,
                 'skillTree'=>['logdisks'=>100000,'researchPoints'=>0,'resetCount'=>0]],
             'skill_points'=>['engineering'=>5,'shieldEngineering'=>5,'detonation1'=>2,'detonation2'=>3,
                 'heatseekingMissiles'=>5,'rocketFusion'=>5,'cruelty1'=>2,'cruelty2'=>3,'explosives'=>5,'luck1'=>2,'luck2'=>3]
@@ -42,10 +44,11 @@ function starterProfile(mysqli $db): array {
             'inGameSettings'=>['petDestroyed'=>false,'blockedGroupInvites'=>false,
                 'selectedLaser'=>'ammunition_laser_ucb-100','selectedRocket'=>'ammunition_rocket_plt-3030',
                 'selectedRocketLauncher'=>'ammunition_rocketlauncher_hstrm-01','selectedFormation'=>'drone_formation_default',
-                'currentConfig'=>1,'selectedCpus'=>['equipment_extra_cpu_arol-x','equipment_extra_cpu_rllb-x']],
+                'currentConfig'=>1,'selectedCpus'=>['equipment_extra_cpu_arol-x','equipment_extra_cpu_rllb-x','equipment_extra_cpu_aim-02']],
             'slotbarItems'=>(object)[1=>'ammunition_laser_ucb-100',2=>'ammunition_laser_rsb-75',3=>'ammunition_laser_sab-50',
                 4=>'ammunition_rocket_plt-3030',5=>'ammunition_specialammo_emp-01',6=>'equipment_extra_cpu_ish-01',
-                7=>'ammunition_mine_smb-01',8=>'drone_formation_f-09-mo',9=>'drone_formation_f-07-di',10=>'drone_formation_default']
+                7=>'ammunition_mine_smb-01',8=>'drone_formation_f-09-mo',9=>'drone_formation_f-07-di',10=>'drone_formation_default',
+                11=>'ammunition_laser_cbo-100',12=>'ammunition_rocketlauncher_cbr',13=>'equipment_extra_cpu_aim-02']
         ]
     ];
 }

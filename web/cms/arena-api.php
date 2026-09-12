@@ -18,6 +18,15 @@ $userId = (int)$player['userId'];
 $action = (string)($_POST['action'] ?? '');
 $db->query("UPDATE player_duel_invites SET status='expired' WHERE status='pending' AND expiresAt<=NOW()");
 
+if ($action === 'leaderboard') {
+    $leaders = [];
+    $result = $db->query("SELECT a.pilotName, s.wins, s.losses FROM player_duel_stats s JOIN player_accounts a ON a.userId=s.userId ORDER BY s.wins DESC, s.losses ASC, a.pilotName ASC LIMIT 10");
+    while ($row = $result->fetch_assoc()) {
+        $leaders[] = ['pilotName'=>(string)$row['pilotName'], 'wins'=>(int)$row['wins'], 'losses'=>(int)$row['losses']];
+    }
+    arenaResponse(true, '', ['leaderboard'=>$leaders]);
+}
+
 if ($action === 'invite') {
     $nickname = trim((string)($_POST['nickname'] ?? ''));
     if ($nickname === '' || mb_strlen($nickname) > 32) arenaResponse(false, 'Zadaj platný nick.');

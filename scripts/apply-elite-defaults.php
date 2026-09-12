@@ -18,6 +18,23 @@ $db->query("CREATE TABLE IF NOT EXISTS player_duel_invites (
     KEY idx_duel_invitee_status (inviteeId, status, expiresAt),
     KEY idx_duel_inviter_status (inviterId, status, expiresAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$db->query("CREATE TABLE IF NOT EXISTS player_duel_stats (
+    userId INT NOT NULL,
+    wins INT UNSIGNED NOT NULL DEFAULT 0,
+    losses INT UNSIGNED NOT NULL DEFAULT 0,
+    PRIMARY KEY (userId),
+    KEY idx_duel_wins (wins, losses)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$db->query("ALTER TABLE player_equipment ADD COLUMN IF NOT EXISTS config1_pet_lasers MEDIUMTEXT NOT NULL DEFAULT '[]'");
+$db->query("ALTER TABLE player_equipment ADD COLUMN IF NOT EXISTS config1_pet_generators MEDIUMTEXT NOT NULL DEFAULT '[]'");
+$db->query("ALTER TABLE player_equipment ADD COLUMN IF NOT EXISTS config2_pet_lasers MEDIUMTEXT NOT NULL DEFAULT '[]'");
+$db->query("ALTER TABLE player_equipment ADD COLUMN IF NOT EXISTS config2_pet_generators MEDIUMTEXT NOT NULL DEFAULT '[]'");
+$petLasers = json_encode(range(175, 180));
+$petShields = json_encode(range(50, 61));
+foreach ([1, 2] as $config) {
+    $db->query("UPDATE player_equipment SET config{$config}_pet_lasers='$petLasers' WHERE config{$config}_pet_lasers IS NULL OR config{$config}_pet_lasers IN ('', '[]')");
+    $db->query("UPDATE player_equipment SET config{$config}_pet_generators='$petShields' WHERE config{$config}_pet_generators IS NULL OR config{$config}_pet_generators IN ('', '[]')");
+}
 $required = starterProfile($db)['player_equipment']['boosters'];
 $defaultJson = json_encode($required);
 $db->query("ALTER TABLE `player_equipment` ALTER COLUMN `boosters` SET DEFAULT '".$db->real_escape_string($defaultJson)."'");

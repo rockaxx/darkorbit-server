@@ -1,6 +1,7 @@
 const { app, BrowserWindow, session, Menu } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const { nextZoomFactor } = require('./client-zoom');
 const local = path.resolve(__dirname, '../.local');
 const origin = 'http://127.0.0.1';
 app.setPath('userData', path.join(local, 'client-profile'));
@@ -9,6 +10,7 @@ app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.344');
 app.commandLine.appendSwitch('allow-outdated-plugins');
 const log = message => fs.appendFileSync(path.join(local, 'logs/client.log'), `${new Date().toISOString()} ${message}\n`);
 let window;
+let gameForce2D = null;
 app.whenReady().then(async () => {
   session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
     const allowed = details.url.startsWith(origin + '/') || details.url.startsWith('data:') || details.url.startsWith('blob:');
@@ -31,6 +33,22 @@ app.whenReady().then(async () => {
     ]}
   ]));
   window.webContents.on('console-message', (_, level, message) => log(`console ${level}: ${message}`));
+  window.webContents.on('did-finish-load', async () => {
+    if (!window.webContents.getURL().includes('/map-revolution')) return;
+    const html = await window.webContents.executeJavaScript('document.documentElement.innerHTML');
+    const match = html.match(/"display2d"\s*:\s*"([12])"/);
+    gameForce2D = match ? match[1] === '2' : null;
+  });
+  window.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'mouseWheel' || !input.control || !window.webContents.getURL().includes('/map-revolution')) return;
+    const current = window.webContents.getZoomFactor();
+    const next = nextZoomFactor(current, input.deltaY, input.control, gameForce2D === true);
+    if (next !== current) {
+      event.preventDefault();
+      window.webContents.setZoomFactor(next);
+      log(`2D zoom changed to ${next.toFixed(1)}`);
+    }
+  });
   window.webContents.on('new-window', (event, url) => {
     event.preventDefault();
     if (url.startsWith(origin + '/')) window.loadURL(url);

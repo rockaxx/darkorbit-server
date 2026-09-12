@@ -18,4 +18,11 @@ if ($query -notmatch 'DroneLevel16ShieldBonusPercent\s*=\s*26') { throw 'Level-1
 if ($installer -notmatch 'EliteUpgradeLevel') { throw 'Hangar LV16 patch is not durable.' }
 if ($start -notmatch 'apply-elite-defaults\.php') { throw 'Existing/new database accounts are not migrated.' }
 
+if ($starter -notmatch "'petLasers'\s*=>" -or $starter -notmatch "'petShields'\s*=>") { throw 'Starter PET equipment is missing.' }
+if ($starter -notmatch 'equipment_extra_cpu_aim-02') { throw 'Starter AIM CPU is missing.' }
+if ($starter -notmatch 'ammunition_laser_cbo-100' -or $starter -notmatch 'ammunition_rocketlauncher_cbr') { throw 'Starter CBO/CBR ammunition is missing.' }
+if ($installer -match '\$generalPet' -or $installer -match '\$petConfig1') { throw 'Legacy Flash Hangar still receives unsupported PET data.' }
+if ($installer -notmatch '\$petLaserClear' -or $installer -notmatch '\$petGeneratorClear') { throw 'Legacy PET clearConfig cleanup is not durable.' }
+if ($installer -notmatch 'config1_pet_lasers' -or $installer -notmatch 'pet_generators') { throw 'PET equipment persistence patch is not durable.' }
+
 Write-Host 'PASS: elite LV16 equipment and permanent booster policy.'

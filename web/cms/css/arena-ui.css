@@ -15,3 +15,4 @@
 #arena-invite p{margin:0 0 9px}
 #arena-status{min-height:18px;margin:10px 0 0;color:#9db3bd}
 #arena-status.ok{color:#73e6a1}#arena-status.error{color:#ff8181}
+.arena-ranking{margin-top:10px;padding-top:9px;border-top:1px solid #274657;color:#9cb9c8}.arena-ranking ol{margin:7px 0 0;padding-left:24px;max-height:132px;overflow:auto}.arena-ranking li{padding:2px 0;color:#dcecff}

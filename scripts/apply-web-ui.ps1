@@ -102,6 +102,47 @@ $inventory = $inventory.Replace(
     '$drone = ["I" => $i, "L" => $item_id, "LV" => 5, "HP" => "0%",',
     '$drone = ["I" => $i, "L" => $item_id, "LV" => EliteUpgradeLevel, "HP" => "0%",'
 )
+# Keep the legacy Flash payload limited to the ship/drone schema it supports.
+# PET equipment is managed by the HTML panel installed from web/cms instead.
+$inventory = [Text.RegularExpressions.Regex]::Replace(
+    $inventory,
+    '(?m)^[^\r\n]*"pet": \{"EQ"[^\r\n]*\r?\n',
+    ''
+)
+$inventory = [Text.RegularExpressions.Regex]::Replace(
+    $inventory,
+    '(?m)^[^\r\n]*"pet": \{"L": 22, "PN"[^\r\n]*\r?\n',
+    ''
+)
+$inventory = $inventory.Replace(
+    "in_array(`$json_array['from']['target'], ['ship','pet'], true) && `$json_array['to']['target'] == 'inventory'",
+    "`$json_array['from']['target'] == 'ship' && `$json_array['to']['target'] == 'inventory'"
+)
+$inventory = [Text.RegularExpressions.Regex]::Replace($inventory, '(?m)^[^\r\n]*\$sourcePrefix = [^\r\n]*\r?\n', '')
+$inventory = $inventory.Replace(
+    "`$toType = 'config'.`$json_array['to']['configId'].'_'.`$sourcePrefix.`$json_array['from']['slotset'];",
+    "`$toType = 'config'.`$json_array['to']['configId'].'_'.`$json_array['from']['slotset'].'';"
+)
+$inventory = $inventory.Replace(
+    "`$json_array['from']['target'] == 'inventory' && in_array(`$json_array['to']['target'], ['ship','pet'], true)",
+    "`$json_array['from']['target'] == 'inventory' && `$json_array['to']['target'] == 'ship'"
+)
+$inventory = [Text.RegularExpressions.Regex]::Replace($inventory, '(?m)^[^\r\n]*\$targetPrefix = [^\r\n]*\r?\n', '')
+$inventory = $inventory.Replace(
+    "`$toType = 'config'.`$json_array['to']['configId'].'_'.`$targetPrefix.`$json_array['to']['slotset'];",
+    "`$toType = 'config'.`$json_array['to']['configId'].'_'.`$json_array['to']['slotset'].'';"
+)
+$inventory = $inventory.Replace(
+    "`$max_item = `$json_array['to']['target'] == 'pet' ? (`$json_array['to']['slotset'] == 'lasers' ? 6 : 12) : `$currentShip[`$json_array['to']['slotset']];",
+    "`$max_item = `$currentShip[`$json_array['to']['slotset']];"
+)
+$petLaserClear = @'
+, config".$json_array['configID']."_pet_lasers = '[]'
+'@.Trim()
+$petGeneratorClear = @'
+, config".$json_array['configID']."_pet_generators = '[]'
+'@.Trim()
+$inventory = $inventory.Replace($petLaserClear, '').Replace($petGeneratorClear, '')
 if (!$inventory.Contains('array_fill(0, EliteUpgradeLevel + 1')) {
     $levelFunction = @'
 function GetCurrentItemLevelsInformation()
@@ -131,20 +172,30 @@ function GetDroneLevelsInformation
 }
 if (!$inventory.Contains('"LV" => $upgradeLevel') -or
     !$inventory.Contains('"LV" => EliteUpgradeLevel') -or
-    !$inventory.Contains('array_fill(0, EliteUpgradeLevel + 1')) {
+    !$inventory.Contains('array_fill(0, EliteUpgradeLevel + 1') -or
+    $inventory.Contains('"pet": {"EQ"') -or
+    $inventory.Contains('"pet": {"L": 22') -or
+    $inventory.Contains("['ship','pet']") -or
+    $inventory.Contains('$sourcePrefix') -or
+    $inventory.Contains('$targetPrefix') -or
+    $inventory.Contains('_pet_lasers = ''[]''')) {
     throw 'Could not apply Hangar level-16 equipment patch.'
 }
 [IO.File]::WriteAllText($inventoryPath, $inventory, [Text.UTF8Encoding]::new($false))
 
 $mapPath = Join-Path $destination 'files/external/map_revolution.php'
 $map = [IO.File]::ReadAllText($mapPath)
+$map = $map.Replace(
+    '"display2d": "2"',
+    '"display2d": "<?php echo (int)$player[''version''] ? 1 : 2; ?>"'
+)
 if (!$map.Contains('css/arena-ui.css')) {
     $map = $map.Replace('</head>', '    <link rel="stylesheet" href="<?php echo DOMAIN; ?>css/arena-ui.css">' + "`r`n</head>")
 }
 if (!$map.Contains('js/arena-ui.js')) {
     $map = $map.Replace('</body>', '  <script src="<?php echo DOMAIN; ?>js/arena-ui.js"></script>' + "`r`n</body>")
 }
-if (!$map.Contains('css/arena-ui.css') -or !$map.Contains('js/arena-ui.js')) {
+if (!$map.Contains('css/arena-ui.css') -or !$map.Contains('js/arena-ui.js') -or !$map.Contains("`$player['version'] ? 1 : 2")) {
     throw 'Could not install the 1v1 Arena overlay.'
 }
 [IO.File]::WriteAllText($mapPath, $map, [Text.UTF8Encoding]::new($false))

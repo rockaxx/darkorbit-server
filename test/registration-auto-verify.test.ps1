@@ -13,7 +13,7 @@ try {
         password = $password
         password_confirm = $password
     }
-    if ($register.message -notmatch 'successfully registered') {
+    if ($register.message -notmatch 'successfully registered|Local account created') {
         throw "Registration failed: $($register.message)"
     }
 

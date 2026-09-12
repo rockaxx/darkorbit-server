@@ -102,6 +102,15 @@ namespace Ow.Managers
             }
         }
 
+        public static void RecordDuelResult(int winnerId, int loserId)
+        {
+            using (var mySqlClient = SqlDatabaseManager.GetClient())
+            {
+                mySqlClient.ExecuteNonQuery($"INSERT INTO player_duel_stats (userId, wins, losses) VALUES ({winnerId}, 1, 0) ON DUPLICATE KEY UPDATE wins = wins + 1");
+                mySqlClient.ExecuteNonQuery($"INSERT INTO player_duel_stats (userId, wins, losses) VALUES ({loserId}, 0, 1) ON DUPLICATE KEY UPDATE losses = losses + 1");
+            }
+        }
+
         public static bool CheckSessionId(int userId, string sessionId)
         {
             using (var mySqlClient = SqlDatabaseManager.GetClient())
@@ -289,6 +298,25 @@ namespace Ow.Managers
                                 damage[i - 1] += Maths.GetPercentage(damage[i - 1], 10);
                             else if (herculesCount == 10)
                                 hitpoints[i - 1] += Maths.GetPercentage(hitpoints[i - 1], 20);
+                        }
+
+                        if (player.Pet != null)
+                        {
+                            var config = player.Settings.InGameSettings.currentConfig == 2 ? 2 : 1;
+                            var petDamage = 0;
+                            var petShield = 0;
+                            foreach (int itemId in (dynamic)JsonConvert.DeserializeObject(row[$"config{config}_pet_lasers"].ToString()))
+                            {
+                                if (itemId >= 0 && itemId < 40) petDamage += lf3Damage;
+                                else if (itemId >= 140) petDamage += lf4Damage;
+                            }
+                            foreach (int itemId in (dynamic)JsonConvert.DeserializeObject(row[$"config{config}_pet_generators"].ToString()))
+                                if (itemId >= 40 && itemId < 100) petShield += bo2Shield;
+                            player.Pet.Damage = 5000 + petDamage;
+                            var oldPetShieldMaximum = player.Pet.MaxShieldPoints;
+                            var oldPetShield = player.Pet.CurrentShieldPoints;
+                            player.Pet.MaxShieldPoints = 50000 + petShield;
+                            player.Pet.CurrentShieldPoints = PetDamagePolicy.ScaleShield(oldPetShield, oldPetShieldMaximum, player.Pet.MaxShieldPoints);
                         }
 
                         speed[0] += Maths.GetPercentage(speed[0], 20);
