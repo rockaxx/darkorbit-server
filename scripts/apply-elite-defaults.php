@@ -25,6 +25,43 @@ $db->query("CREATE TABLE IF NOT EXISTS player_duel_stats (
     PRIMARY KEY (userId),
     KEY idx_duel_wins (wins, losses)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$db->query("CREATE TABLE IF NOT EXISTS player_competitive_stats (
+    userId INT NOT NULL,
+    elo INT UNSIGNED NOT NULL DEFAULT 100,
+    wins INT UNSIGNED NOT NULL DEFAULT 0,
+    losses INT UNSIGNED NOT NULL DEFAULT 0,
+    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (userId),
+    KEY idx_competitive_rank (elo, wins, losses)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$db->query("CREATE TABLE IF NOT EXISTS player_competitive_queue (
+    userId INT NOT NULL,
+    joinedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    heartbeatAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (userId),
+    KEY idx_competitive_queue_heartbeat (heartbeatAt, joinedAt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$db->query("CREATE TABLE IF NOT EXISTS player_competitive_matches (
+    matchId INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    player1Id INT NOT NULL,
+    player2Id INT NOT NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'starting',
+    winnerId INT NULL,
+    loserId INT NULL,
+    winnerEloBefore INT NULL,
+    loserEloBefore INT NULL,
+    winnerEloAfter INT NULL,
+    loserEloAfter INT NULL,
+    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    startedAt DATETIME NULL,
+    completedAt DATETIME NULL,
+    PRIMARY KEY (matchId),
+    KEY idx_competitive_player1 (player1Id, status),
+    KEY idx_competitive_player2 (player2Id, status),
+    KEY idx_competitive_status (status, createdAt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$db->query("DELETE FROM player_competitive_queue WHERE heartbeatAt < DATE_SUB(NOW(), INTERVAL 20 SECOND)");
+$db->query("UPDATE player_competitive_matches SET status='failed' WHERE status IN ('starting','active') AND createdAt < DATE_SUB(NOW(), INTERVAL 30 MINUTE)");
 $db->query("ALTER TABLE player_equipment ADD COLUMN IF NOT EXISTS config1_pet_lasers MEDIUMTEXT NOT NULL DEFAULT '[]'");
 $db->query("ALTER TABLE player_equipment ADD COLUMN IF NOT EXISTS config1_pet_generators MEDIUMTEXT NOT NULL DEFAULT '[]'");
 $db->query("ALTER TABLE player_equipment ADD COLUMN IF NOT EXISTS config2_pet_lasers MEDIUMTEXT NOT NULL DEFAULT '[]'");

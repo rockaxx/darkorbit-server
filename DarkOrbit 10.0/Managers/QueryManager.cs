@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Data;
 using Ow.Game;
+using Ow.Game.Events;
 using Newtonsoft.Json;
 using Ow.Game.Objects.Players;
 using Ow.Game.Objects.Stations;
@@ -18,6 +19,7 @@ using Ow.Game.Movements;
 using Newtonsoft.Json.Linq;
 using Ow.Net;
 using Ow.Net.netty.commands;
+using MySql.Data.MySqlClient;
 
 namespace Ow.Managers
 {
@@ -108,6 +110,119 @@ namespace Ow.Managers
             {
                 mySqlClient.ExecuteNonQuery($"INSERT INTO player_duel_stats (userId, wins, losses) VALUES ({winnerId}, 1, 0) ON DUPLICATE KEY UPDATE wins = wins + 1");
                 mySqlClient.ExecuteNonQuery($"INSERT INTO player_duel_stats (userId, wins, losses) VALUES ({loserId}, 0, 1) ON DUPLICATE KEY UPDATE losses = losses + 1");
+            }
+        }
+
+        public static void RecordCompetitiveResult(int matchId, int winnerId, int loserId)
+        {
+            using (var mySqlClient = SqlDatabaseManager.GetClient())
+            using (var transaction = mySqlClient.mConnection.BeginTransaction())
+            using (var command = mySqlClient.mConnection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                try
+                {
+                    command.CommandText = "SELECT status, player1Id, player2Id FROM player_competitive_matches " +
+                        "WHERE matchId=@matchId FOR UPDATE";
+                    command.Parameters.AddWithValue("@matchId", matchId);
+                    string status = null;
+                    int player1Id = 0;
+                    int player2Id = 0;
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            status = Convert.ToString(reader["status"]);
+                            player1Id = Convert.ToInt32(reader["player1Id"]);
+                            player2Id = Convert.ToInt32(reader["player2Id"]);
+                        }
+                    }
+
+                    var playersMatch = (player1Id == winnerId && player2Id == loserId) ||
+                        (player1Id == loserId && player2Id == winnerId);
+                    if ((status != "starting" && status != "active") || !playersMatch)
+                    {
+                        transaction.Commit();
+                        return;
+                    }
+
+                    command.Parameters.Clear();
+                    command.CommandText = "INSERT INTO player_competitive_stats (userId, elo, wins, losses) " +
+                        "VALUES (@winnerId,100,0,0),(@loserId,100,0,0) ON DUPLICATE KEY UPDATE userId=VALUES(userId)";
+                    command.Parameters.AddWithValue("@winnerId", winnerId);
+                    command.Parameters.AddWithValue("@loserId", loserId);
+                    command.ExecuteNonQuery();
+
+                    command.CommandText = "SELECT userId, elo FROM player_competitive_stats " +
+                        "WHERE userId IN (@winnerId,@loserId) FOR UPDATE";
+                    var winnerRating = CompetitiveRatingPolicy.DefaultRating;
+                    var loserRating = CompetitiveRatingPolicy.DefaultRating;
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var userId = Convert.ToInt32(reader["userId"]);
+                            if (userId == winnerId) winnerRating = Convert.ToInt32(reader["elo"]);
+                            if (userId == loserId) loserRating = Convert.ToInt32(reader["elo"]);
+                        }
+                    }
+
+                    var rating = CompetitiveRatingPolicy.Calculate(winnerRating, loserRating);
+                    command.Parameters.AddWithValue("@winnerElo", rating.WinnerRating);
+                    command.Parameters.AddWithValue("@loserElo", rating.LoserRating);
+                    command.Parameters.AddWithValue("@winnerBefore", winnerRating);
+                    command.Parameters.AddWithValue("@loserBefore", loserRating);
+                    command.CommandText = "UPDATE player_competitive_stats SET elo=@winnerElo,wins=wins+1,updatedAt=NOW() WHERE userId=@winnerId";
+                    command.ExecuteNonQuery();
+                    command.CommandText = "UPDATE player_competitive_stats SET elo=@loserElo,losses=losses+1,updatedAt=NOW() WHERE userId=@loserId";
+                    command.ExecuteNonQuery();
+                    command.CommandText = "UPDATE player_competitive_matches SET status='completed',winnerId=@winnerId,loserId=@loserId," +
+                        "winnerEloBefore=@winnerBefore,loserEloBefore=@loserBefore,winnerEloAfter=@winnerElo," +
+                        "loserEloAfter=@loserElo,completedAt=NOW() WHERE matchId=@matchId";
+                    command.ExecuteNonQuery();
+                    transaction.Commit();
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+
+            RefreshCompetitiveTitles();
+        }
+
+        public static void RefreshCompetitiveTitles()
+        {
+            var rankedTitles = new Dictionary<int, string>();
+            var previousTitleIds = new HashSet<int>();
+            using (var mySqlClient = SqlDatabaseManager.GetClient())
+            {
+                var previous = mySqlClient.ExecuteQueryTable(
+                    "SELECT userId FROM player_accounts WHERE title IN ('Best Player','2nd Best Player','3rd Best Player')");
+                foreach (DataRow row in previous.Rows) previousTitleIds.Add(Convert.ToInt32(row["userId"]));
+
+                var top = mySqlClient.ExecuteQueryTable(
+                    "SELECT userId FROM player_competitive_stats ORDER BY elo DESC,wins DESC,losses ASC,updatedAt ASC,userId ASC LIMIT 3");
+                var rank = 1;
+                foreach (DataRow row in top.Rows)
+                {
+                    rankedTitles[Convert.ToInt32(row["userId"])] = CompetitiveRatingPolicy.TitleForRank(rank);
+                    rank++;
+                }
+
+                mySqlClient.ExecuteNonQuery(
+                    "UPDATE player_accounts SET title='' WHERE title IN ('Best Player','2nd Best Player','3rd Best Player')");
+                foreach (var entry in rankedTitles)
+                    mySqlClient.ExecuteNonQuery($"UPDATE player_accounts SET title='{entry.Value}' WHERE userId={entry.Key}");
+            }
+
+            foreach (var userId in previousTitleIds.Union(rankedTitles.Keys))
+            {
+                var onlinePlayer = GameManager.GetPlayerById(userId);
+                if (onlinePlayer?.GameSession == null) continue;
+                string title;
+                onlinePlayer.SetTitle(rankedTitles.TryGetValue(userId, out title) ? title : "");
             }
         }
 

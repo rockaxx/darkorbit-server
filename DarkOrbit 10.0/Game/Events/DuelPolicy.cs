@@ -6,12 +6,13 @@ namespace Ow.Game.Events
     {
         public const int InviteLifetimeSeconds = 60;
         public const int CountdownSeconds = 25;
-        public const int FirstArenaMapId = 101;
-        public const int LastArenaMapId = 111;
-        public const int ArenaMinX = 2500;
-        public const int ArenaMaxX = 7500;
-        public const int ArenaMinY = 1200;
-        public const int ArenaMaxY = 5200;
+        public const int FirstArenaMapId = 121;
+        public const int LastArenaMapId = 121;
+        public const int FirstSpawnX = 4400;
+        public const int FirstSpawnY = 3600;
+        public const int SecondSpawnX = 5600;
+        public const int SecondSpawnY = 2400;
+        public static readonly string[] SpawnBarrierPoiIds = { "uba_poi2", "uba_poi3" };
 
         public static bool CanInvite(int inviterId, int inviteeId, bool inviterOnline, bool inviteeOnline,
             bool inviterBusy, bool inviteeBusy)
@@ -30,23 +31,12 @@ namespace Ow.Game.Events
             return mapId >= FirstArenaMapId && mapId <= LastArenaMapId;
         }
 
-        public static bool IsInsideArena(int x, int y)
-        {
-            return x >= ArenaMinX && x <= ArenaMaxX && y >= ArenaMinY && y <= ArenaMaxY;
-        }
-
-        public static int ClampArenaX(int x)
-        {
-            return Math.Max(ArenaMinX, Math.Min(ArenaMaxX, x));
-        }
-
-        public static int ClampArenaY(int y)
-        {
-            return Math.Max(ArenaMinY, Math.Min(ArenaMaxY, y));
-        }
-
         public static bool CanUseShipAbility(bool inDuel) { return !inDuel; }
 
         public static bool CanUsePet(bool inDuel) { return true; }
+
+        public static bool ShouldShowArenaOverlay() { return false; }
+
+        public static bool ShouldRestrictMovement() { return false; }
     }
 }

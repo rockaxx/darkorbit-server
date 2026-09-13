@@ -4,6 +4,7 @@
 #arena-panel{pointer-events:auto;width:310px;margin-top:8px;padding:13px;border:1px solid #278ab4;border-radius:5px;background:#091621f2;box-shadow:0 8px 32px #000b}
 #arena-panel[aria-hidden="true"]{display:none}
 #arena-panel header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;color:#62d7ff;font-size:16px}
+#arena-panel .arena-tabs{display:flex;gap:5px;margin-bottom:12px}.arena-tabs button{flex:1;border:1px solid #31576b;background:#0b2636;color:#9cb9c8;padding:7px;cursor:pointer}.arena-tabs button.active{border-color:#35bdf2;background:#14658a;color:#fff}.arena-pane{display:none}.arena-pane.active{display:block}
 #arena-close{border:0;background:transparent;color:#9cc8da;font-size:24px;line-height:18px;cursor:pointer}
 #arena-form label{display:block;margin-bottom:5px;color:#9cb9c8}
 #arena-form>div,#arena-invite>div{display:flex;gap:7px}
@@ -15,4 +16,5 @@
 #arena-invite p{margin:0 0 9px}
 #arena-status{min-height:18px;margin:10px 0 0;color:#9db3bd}
 #arena-status.ok{color:#73e6a1}#arena-status.error{color:#ff8181}
-.arena-ranking{margin-top:10px;padding-top:9px;border-top:1px solid #274657;color:#9cb9c8}.arena-ranking ol{margin:7px 0 0;padding-left:24px;max-height:132px;overflow:auto}.arena-ranking li{padding:2px 0;color:#dcecff}
+.competitive-card{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid #274657;background:#07111a}.competitive-card>div{display:flex;flex-direction:column}.competitive-card span{color:#8ba5b2;font-size:12px}.competitive-card button{border:1px solid #d79c25;background:#70500f;color:#fff;padding:8px 10px;cursor:pointer}.competitive-card button.searching{border-color:#a34c55;background:#632d34}
+.arena-ranking{margin-top:10px;padding-top:9px;border-top:1px solid #274657;color:#9cb9c8}.arena-ranking ol{margin:7px 0 0;padding-left:24px;max-height:190px;overflow:auto}.arena-ranking li{padding:3px 0;color:#dcecff}.arena-ranking li span{display:block}.competitive-title{display:inline-block;margin-top:2px;font-size:11px;font-style:normal;font-weight:700}.competitive-title.gold{color:#ffd447;text-shadow:0 0 6px #ffbf00}.competitive-title.silver{color:#dce8ef;text-shadow:0 0 5px #a7c2d0}.competitive-title.bronze{color:#e59655;text-shadow:0 0 5px #9b4f20}

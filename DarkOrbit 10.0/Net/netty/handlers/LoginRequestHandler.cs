@@ -118,7 +118,7 @@ namespace Ow.Net.netty.handlers
                 player.SendCommand(player.GetShipInitializationCommand());
 
                 if (player.Title != "")
-                    player.SendPacket($"0|n|t|{player.Id}|1|{player.Title}");
+                    player.SendPacket(CompetitiveRatingPolicy.TitlePacket(player.Id, player.Title));
 
                 player.SendPacket(player.DroneManager.GetDronesPacket());
                 player.SendCommand(DroneFormationChangeCommand.write(player.Id, DroneManager.GetSelectedFormationId(player.Settings.InGameSettings.selectedFormation)));

@@ -167,6 +167,16 @@ class SocketServer
             case "StartDuel":
                 Send(handler, Duel.TryCreate(GameManager.GetPlayerById(Int(parameters["InviterId"])), GameManager.GetPlayerById(Int(parameters["InviteeId"]))).ToString());
                 break;
+            case "CanQueueCompetitive":
+                player = GameManager.GetPlayerById(Int(parameters["UserId"]));
+                Send(handler, Duel.CanQueue(player).ToString());
+                break;
+            case "StartCompetitiveDuel":
+                Send(handler, Duel.TryCreateCompetitive(
+                    GameManager.GetPlayerById(Int(parameters["Player1Id"])),
+                    GameManager.GetPlayerById(Int(parameters["Player2Id"])),
+                    Int(parameters["MatchId"])).ToString());
+                break;
         }
     }
 

@@ -1,6 +1,7 @@
 using Ow.Game.Movements;
 using Ow.Game.Objects;
 using Ow.Game.Objects.Mines;
+using Ow.Game.Objects.Players.Managers;
 using Ow.Game.Ticks;
 using Ow.Managers;
 using Ow.Net.netty.commands;
@@ -37,30 +38,25 @@ namespace Ow.Game.Events
         public bool PeaceArea = true;
         public ConcurrentDictionary<int, Player> Players { get; }
         public Spacemap ArenaMap { get; }
-        public Position Position1 = new Position(3700, 3200);
-        public Position Position2 = new Position(6400, 3200);
+        public Position Position1 = new Position(DuelPolicy.FirstSpawnX, DuelPolicy.FirstSpawnY);
+        public Position Position2 = new Position(DuelPolicy.SecondSpawnX, DuelPolicy.SecondSpawnY);
 
         private readonly Dictionary<int, Player> participants;
         private readonly Dictionary<int, ReturnLocation> ReturnLocations;
-        private readonly POI arenaBoundary;
+        private readonly bool competitive;
+        private readonly int competitiveMatchId;
         private int finished;
 
-        private Duel(Player first, Player second, int arenaMapId)
+        private Duel(Player first, Player second, int arenaMapId, bool competitive, int competitiveMatchId)
         {
+            this.competitive = competitive;
+            this.competitiveMatchId = competitiveMatchId;
             ArenaMap = GameManager.GetSpacemap(arenaMapId);
             Players = new ConcurrentDictionary<int, Player>();
             Players.TryAdd(first.Id, first);
             Players.TryAdd(second.Id, second);
             participants = Players.ToDictionary(entry => entry.Key, entry => entry.Value);
             ReturnLocations = participants.ToDictionary(entry => entry.Key, entry => new ReturnLocation(entry.Value));
-            arenaBoundary = new POI("duel_square_" + arenaMapId, POITypes.CAGE, POIDesigns.SIMPLE,
-                POIShapes.RECTANGLE, new List<Position> {
-                    new Position(DuelPolicy.ArenaMinX, DuelPolicy.ArenaMinY),
-                    new Position(DuelPolicy.ArenaMaxX, DuelPolicy.ArenaMinY),
-                    new Position(DuelPolicy.ArenaMaxX, DuelPolicy.ArenaMaxY),
-                    new Position(DuelPolicy.ArenaMinX, DuelPolicy.ArenaMaxY)
-                }, true, false);
-
             var ordered = participants.Values.OrderBy(player => player.Id).ToArray();
             foreach (var player in ordered)
             {
@@ -86,14 +82,30 @@ namespace Ow.Game.Events
                 !first.Destroyed && !second.Destroyed;
         }
 
+        public static bool CanQueue(Player player)
+        {
+            return player != null && player.GameSession != null && !player.Destroyed &&
+                player.Storage.Duel == null && player.Storage.Uba == null && !EventManager.JackpotBattle.InEvent(player);
+        }
+
         public static bool TryCreate(Player first, Player second)
+        {
+            return TryCreate(first, second, false, 0);
+        }
+
+        public static bool TryCreateCompetitive(Player first, Player second, int matchId)
+        {
+            return matchId > 0 && TryCreate(first, second, true, matchId);
+        }
+
+        private static bool TryCreate(Player first, Player second, bool competitive, int matchId)
         {
             lock (ArenaAllocationLock)
             {
                 if (!CanCreate(first, second)) return false;
                 var mapId = AvailableArenaMaps.FirstOrDefault(id => !ActiveArenas.ContainsKey(id) && GameManager.GetSpacemap(id) != null);
                 if (mapId == 0) return false;
-                var duel = new Duel(first, second, mapId);
+                var duel = new Duel(first, second, mapId, competitive, matchId);
                 return ActiveArenas.TryAdd(mapId, duel);
             }
         }
@@ -103,9 +115,21 @@ namespace Ow.Game.Events
             await Task.Delay(Portal.JUMP_DELAY + 250);
             foreach (var player in Players.Values)
             {
-                if (ArenaMap.Id == 101) player.SendCommand(MapRemovePOICommand.write("jackpot_poi"));
-                player.SendCommand(arenaBoundary.GetPOICreateCommand());
-                player.SendPacket("0|A|STM|1v1: PET je povoleny, schopnosti lode su vypnute.");
+                var pet = player.Pet;
+                if (PetVisibilityPolicy.ShouldActivateForDuel(pet != null, pet?.Activated ?? false,
+                    player.Settings.InGameSettings.petDestroyed))
+                {
+                    pet.Invisible = false;
+                    pet.Activate();
+                }
+                else if (pet != null && pet.Activated && !pet.Destroyed)
+                {
+                    pet.Invisible = false;
+                    pet.SynchronizeVisibility();
+                }
+                player.SendPacket(competitive
+                    ? "0|A|STM|Competitive 1v1: Elo zapas. PET je povoleny, schopnosti lode su vypnute."
+                    : "0|A|STM|1v1: PET je povoleny, schopnosti lode su vypnute.");
             }
             for (var seconds = DuelPolicy.CountdownSeconds; seconds > 0 && Volatile.Read(ref finished) == 0; seconds--)
             {
@@ -117,18 +141,22 @@ namespace Ow.Game.Events
             {
                 PeaceArea = false;
                 foreach (var player in Players.Values)
+                {
+                    foreach (var poiId in DuelPolicy.SpawnBarrierPoiIds)
+                        player.SendCommand(MapRemovePOICommand.write(poiId));
                     player.SendPacket("0|A|STM|label_traininggrounds_battle_has_begun");
+                }
+
+                foreach (var pet in Players.Values.Select(player => player.Pet).Where(pet => pet != null))
+                {
+                    pet.Invisible = false;
+                    pet.ForceSynchronizeVisibility(Players.Values);
+                }
             }
         }
 
         public void Tick()
         {
-            foreach (var player in Players.Values)
-            {
-                var position = Movement.ActualPosition(player);
-                if (!DuelPolicy.IsInsideArena(position.X, position.Y))
-                    player.SetPosition(new Position(DuelPolicy.ClampArenaX(position.X), DuelPolicy.ClampArenaY(position.Y)));
-            }
             if (Players.Count <= 1) Finish();
         }
 
@@ -144,11 +172,14 @@ namespace Ow.Game.Events
             {
                 try
                 {
-                    QueryManager.RecordDuelResult(winner.Id, loser.Id);
+                    if (competitive)
+                        QueryManager.RecordCompetitiveResult(competitiveMatchId, winner.Id, loser.Id);
+                    else
+                        QueryManager.RecordDuelResult(winner.Id, loser.Id);
                 }
                 catch (Exception error)
                 {
-                    Logger.Log("error_log", $"- [Duel.cs] RecordDuelResult failed: {error}");
+                    Logger.Log("error_log", $"- [Duel.cs] Record duel result failed: {error}");
                 }
             }
             if (winner != null)
@@ -163,7 +194,6 @@ namespace Ow.Game.Events
                 foreach (var mine in ArenaMap.Objects.Values.OfType<Mine>().Where(mine => mine.Player == participant).ToList())
                     mine.Remove(true);
                 participant.RemoveVisualModifier(VisualModifierCommand.CAMERA);
-                participant.SendCommand(MapRemovePOICommand.write(arenaBoundary.Id));
                 participant.DisableAttack(participant.Settings.InGameSettings.selectedLaser);
                 if (participant.Storage.Duel == this) participant.Storage.Duel = null;
 

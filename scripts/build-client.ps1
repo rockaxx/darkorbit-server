@@ -4,7 +4,7 @@ $stage = Join-Path $root ('.local/client-build-' + [guid]::NewGuid().ToString('N
 New-Item -ItemType Directory -Force $stage | Out-Null
 Copy-Item (Join-Path $root '.local/electron') (Join-Path $stage 'runtime') -Recurse
 Copy-Item (Join-Path $PSScriptRoot 'public-client.js') (Join-Path $stage 'public-client.js')
-foreach ($file in @('client-transport.js','flash-display-mode.js','client-port-guard.ps1','Start-Client.ps1','client-tabs.html','client-tabs.js','client-tabs-preload.js')) {
+foreach ($file in @('client-transport.js','flash-display-mode.js','client-zoom.js','game-zoom-preload.js','client-port-guard.ps1','Start-Client.ps1','client-tabs.html','client-tabs.js','client-tabs-preload.js')) {
   Copy-Item (Join-Path $PSScriptRoot $file) (Join-Path $stage $file)
 }
 Copy-Item (Join-Path $root '.local/client/pepflashplayer.dll') (Join-Path $stage 'pepflashplayer.dll')

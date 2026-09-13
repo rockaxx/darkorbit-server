@@ -140,7 +140,7 @@ namespace Ow.Game.Objects
                             player.SendCommand(otherPlayer.GetShipCreateCommand(player, relationType));
 
                             if (otherPlayer.Title != "" && !EventManager.JackpotBattle.InEvent(otherPlayer))
-                                player.SendPacket($"0|n|t|{otherPlayer.Id}|1|{otherPlayer.Title}");
+                                player.SendPacket(CompetitiveRatingPolicy.TitlePacket(otherPlayer.Id, otherPlayer.Title));
 
                             player.SendPacket(otherPlayer.DroneManager.GetDronesPacket());
                             player.SendCommand(DroneFormationChangeCommand.write(otherPlayer.Id, DroneManager.GetSelectedFormationId(otherPlayer.Settings.InGameSettings.selectedFormation)));
@@ -148,8 +148,7 @@ namespace Ow.Game.Objects
                         else if (character is Pet)
                         {
                             var pet = character as Pet;
-                            if (pet == player.Pet) player.SendCommand(PetHeroActivationCommand.write(pet.Owner.Id, pet.Id, 22, 3, pet.Name, (short)pet.Owner.FactionId, pet.Owner.Clan.Id, 15, pet.Owner.Clan.Tag, pet.Position.X, pet.Position.Y, pet.Speed, new class_11d(class_11d.DEFAULT)));
-                            else player.SendCommand(PetActivationCommand.write(pet.Owner.Id, pet.Id, 22, 3, pet.Name, (short)pet.Owner.FactionId, pet.Owner.Clan.Id, 15, pet.Owner.Clan.Tag, new ClanRelationModule(relationType), pet.Position.X, pet.Position.Y, pet.Speed, false, true, new class_11d(class_11d.DEFAULT)));
+                            pet.SendActivationTo(player);
                         }
                         else player.SendCommand(character.GetShipCreateCommand());
 

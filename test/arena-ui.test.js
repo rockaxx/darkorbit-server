@@ -12,7 +12,9 @@ test('1v1 overlay supports nickname invite, polling, accept, decline and leaderb
   assert.doesNotThrow(() => new Function(script), 'arena overlay JavaScript must parse');
   assert.match(script, /arena-api\.php/);
   assert.match(script, /setInterval\([^,]+,\s*1000\)/s);
-  for (const action of ['invite', 'poll', 'accept', 'decline', 'leaderboard']) assert.match(script, new RegExp(`['\"]${action}['\"]`));
+  for (const action of ['invite', 'poll', 'accept', 'decline', 'competitive_search', 'competitive_cancel', 'competitive_poll', 'competitive_leaderboard']) {
+    assert.match(script, new RegExp(`['\"]${action}['\"]`));
+  }
   assert.match(script, /textContent\s*=/, 'remote nickname must be rendered safely');
   assert.match(css, /z-index\s*:\s*2147483647/);
   assert.match(installer, /arena-ui\.css/);

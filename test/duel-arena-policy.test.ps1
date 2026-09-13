@@ -18,5 +18,7 @@ $socket = Get-Content -LiteralPath (Join-Path $root 'DarkOrbit 10.0/Net/SocketSe
 if ($duel -notmatch 'TryCreate') { throw 'Duel creation is not validated.' }
 if ($duel -notmatch 'ReturnLocations') { throw 'Duel players cannot return to their original locations.' }
 if ($duel -notmatch 'AvailableArenaMaps') { throw 'Concurrent matches lack isolated arena allocation.' }
+if ($duel -notmatch 'MapRemovePOICommand\.write') { throw 'Native Training Arena spawn barriers never open.' }
+if ($duel -notmatch 'ForceSynchronizeVisibility') { throw 'PET entity is not recreated after the arena finishes loading.' }
 if ($socket -notmatch 'StartDuel') { throw 'CMS cannot start an accepted duel.' }
 Write-Host 'PASS: 1v1 duel lifecycle integrated.'

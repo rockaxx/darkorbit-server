@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, Menu } = require('electron');
+const { app, BrowserWindow, session, Menu, ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { nextZoomFactor } = require('./client-zoom');
@@ -21,7 +21,7 @@ app.whenReady().then(async () => {
     if (details.statusCode >= 400) log(`HTTP ${details.statusCode} ${details.url}`);
   });
   window = new BrowserWindow({ width: 1280, height: 850, title: 'DarkOrbit 10 - Local',
-    webPreferences: { plugins: true, nodeIntegration: false, contextIsolation: true } });
+    webPreferences: { plugins: true, preload: path.join(__dirname, 'game-zoom-preload.js'), nodeIntegration: false, contextIsolation: true } });
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     {label:'Hra', submenu:[
       {label:'Mapa', accelerator:'F2', click:()=>window.loadURL(origin+'/map-revolution')},
@@ -45,6 +45,16 @@ app.whenReady().then(async () => {
     const next = nextZoomFactor(current, input.deltaY, input.control, gameForce2D === true);
     if (next !== current) {
       event.preventDefault();
+      window.webContents.setZoomFactor(next);
+      log(`2D zoom changed to ${next.toFixed(1)}`);
+    }
+  });
+  ipcMain.on('game-zoom-wheel', (event, deltaY) => {
+    if (event.sender !== window.webContents || !Number.isFinite(deltaY) ||
+        !window.webContents.getURL().includes('/map-revolution')) return;
+    const current = window.webContents.getZoomFactor();
+    const next = nextZoomFactor(current, deltaY, true, gameForce2D === true);
+    if (next !== current) {
       window.webContents.setZoomFactor(next);
       log(`2D zoom changed to ${next.toFixed(1)}`);
     }

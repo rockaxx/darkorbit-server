@@ -66,6 +66,7 @@
     <Compile Include="Game\Clan.cs" />
     <Compile Include="Game\Enums.cs" />
     <Compile Include="Game\Events\Duel.cs" />
+    <Compile Include="Game\Events\CompetitiveRatingPolicy.cs" />
     <Compile Include="Game\Events\JackpotBattle.cs" />
     <Compile Include="Game\Events\Spaceball.cs" />
     <Compile Include="Game\Events\UltimateBattleArena.cs" />
@@ -113,6 +114,8 @@
     <Compile Include="Game\Objects\Players\Attacker.cs" />
     <Compile Include="Game\Objects\Players\Managers\BoosterManager.cs" />
     <Compile Include="Game\Objects\Players\Managers\EliteBoosterPolicy.cs" />
+    <Compile Include="Game\Objects\Players\Managers\PetVisibilityPolicy.cs" />
+    <Compile Include="Game\Objects\Players\Managers\ShieldDamagePolicy.cs" />
     <Compile Include="Game\Objects\Players\RocketLauncher.cs" />
     <Compile Include="Game\Objects\POI.cs" />
     <Compile Include="Game\Objects\Portal.cs" />
@@ -127,6 +130,8 @@
     <Compile Include="Game\Movements\Position.cs" />
     <Compile Include="Game\Objects\Players\Managers\SkillManager.cs" />
     <Compile Include="Game\Objects\Players\Managers\AmmunitionManager.cs" />
+    <Compile Include="Game\Objects\Players\Managers\LaserAmmunitionPolicy.cs" />
+    <Compile Include="Game\Objects\Players\Managers\RocketEffectPolicy.cs" />
     <Compile Include="Game\Objects\Players\Managers\AmmunitionVisibilityPolicy.cs" />
     <Compile Include="Game\Objects\Players\Managers\DroneManager.cs" />
     <Compile Include="Game\Objects\Players\Managers\SettingsManager.cs" />
@@ -252,6 +257,7 @@
     <Compile Include="Net\netty\commands\StationModuleModule.cs" />
     <Compile Include="Net\netty\commands\PetActivationCommand.cs" />
     <Compile Include="Net\netty\commands\PetHeroActivationCommand.cs" />
+    <Compile Include="Net\netty\commands\PetVisibilityCommand.cs" />
     <Compile Include="Net\netty\commands\PetGearSelectCommand.cs" />
     <Compile Include="Net\netty\commands\PetGearAddCommand.cs" />
     <Compile Include="Net\netty\commands\PetInitializationCommand.cs" />

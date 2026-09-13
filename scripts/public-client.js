@@ -50,7 +50,13 @@ app.whenReady().then(async () => {
   function select(tab) {
     if (!['home', 'game'].includes(tab)) return;
     if (!views[tab]) {
-      const view = new BrowserView({ webPreferences: { plugins: true, nodeIntegration: false, contextIsolation: true, backgroundThrottling: false } });
+      const view = new BrowserView({ webPreferences: {
+        plugins: true,
+        preload: tab === 'game' ? path.join(__dirname, 'game-zoom-preload.js') : undefined,
+        nodeIntegration: false,
+        contextIsolation: true,
+        backgroundThrottling: false
+      } });
       views[tab] = view;
       view.webContents.on('new-window', (event, url) => {
         event.preventDefault();
@@ -93,6 +99,16 @@ app.whenReady().then(async () => {
   }
   function resize() { const [width, height] = window.getContentSize(); if (views[active]) views[active].setBounds({ x: 0, y: chromeHeight, width, height: Math.max(0, height - chromeHeight) }); }
   ipcMain.on('select-tab', (event, tab) => { if (event.sender === window.webContents) select(tab); });
+  ipcMain.on('game-zoom-wheel', (event, deltaY) => {
+    const view = views.game;
+    if (!view || event.sender !== view.webContents || !Number.isFinite(deltaY)) return;
+    const current = view.webContents.getZoomFactor();
+    const next = nextZoomFactor(current, deltaY, true, gameForce2D === true);
+    if (next !== current) {
+      view.webContents.setZoomFactor(next);
+      log(`2D zoom changed to ${next.toFixed(1)}`);
+    }
+  });
   ipcMain.on('open-hangar', event => { if (event.sender === window.webContents) { select('home'); views.home.webContents.loadURL(transport.origin + '/equipment'); } });
   ipcMain.on('arena-open', (event, open) => { if (event.sender === window.webContents) { chromeHeight = open ? 250 : 48; resize(); } });
   ipcMain.handle('arena-api', async (event, payload) => {

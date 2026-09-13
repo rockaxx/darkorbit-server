@@ -18,8 +18,17 @@ internal static class DuelPolicyTest
         var created = new DateTime(2026, 9, 11, 12, 0, 0, DateTimeKind.Utc);
         Check(!DuelPolicy.IsExpired(created, created.AddSeconds(59)), "invite expires too early");
         Check(DuelPolicy.IsExpired(created, created.AddSeconds(60)), "invite must expire at 60 seconds");
-        Check(DuelPolicy.IsArenaMapId(101) && DuelPolicy.IsArenaMapId(111), "arena pool boundary missing");
-        Check(!DuelPolicy.IsArenaMapId(100) && !DuelPolicy.IsArenaMapId(112), "arena pool leaked");
+        Check(DuelPolicy.IsArenaMapId(121), "1v1 must use the native Training Arena map");
+        Check(!DuelPolicy.IsArenaMapId(101) && !DuelPolicy.IsArenaMapId(120) && !DuelPolicy.IsArenaMapId(122),
+            "1v1 must not use Jackpot or non-Training-Arena maps");
+        Check(DuelPolicy.FirstSpawnX == 4400 && DuelPolicy.FirstSpawnY == 3600,
+            "first player must use the native Training Arena spawn");
+        Check(DuelPolicy.SecondSpawnX == 5600 && DuelPolicy.SecondSpawnY == 2400,
+            "second player must use the native Training Arena spawn");
+        Check(DuelPolicy.SpawnBarrierPoiIds.Length == 2 &&
+            DuelPolicy.SpawnBarrierPoiIds[0] == "uba_poi2" &&
+            DuelPolicy.SpawnBarrierPoiIds[1] == "uba_poi3",
+            "the two native spawn barriers must open when the countdown ends");
         Console.WriteLine("PASS: 1v1 duel invitation policy.");
         return 0;
     }

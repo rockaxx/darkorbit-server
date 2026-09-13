@@ -30,6 +30,8 @@ namespace Ow.Game.Objects
         public bool KamikazeArmed = false;
         public DateTime KamikazeCooldownUntil = DateTime.MinValue;
         public short GearId = PetGearTypeModule.PASSIVE;
+        private Character kamikazeTarget;
+        private bool kamikazeRunning;
 
         public Pet(Player player) : base(Randoms.CreateRandomID(), "P.E.T 15", player.FactionId, GameManager.GetShip(22), player.Position, player.Spacemap, player.Clan)
         {
@@ -38,8 +40,8 @@ namespace Ow.Game.Objects
 
             ShieldAbsorption = 0.8;
             Damage = 5000;
-            CurrentHitPoints = 2500;
             MaxHitPoints = 50000;
+            CurrentHitPoints = MaxHitPoints;
             MaxShieldPoints = 50000;
             CurrentShieldPoints = MaxShieldPoints;
         }
@@ -48,37 +50,84 @@ namespace Ow.Game.Objects
         {
             if (Activated)
             {
-                CheckShieldPointsRepair();
-                CheckGuardMode();
-                CheckKamikaze();
-                CheckAutoLoot();
-                Follow(Owner);
                 Movement.ActualPosition(this);
+                CheckShieldPointsRepair();
+                var kamikazeRunning = CheckKamikaze();
+                if (!kamikazeRunning)
+                {
+                    CheckGuardMode();
+                    CheckAutoLoot();
+                    Follow(Owner);
+                }
             }
         }
 
-        private void CheckKamikaze()
+        private bool CheckKamikaze()
         {
             var now = DateTime.Now;
             var inCombat = Owner.AttackingOrUnderAttack(5) || LastCombatTime.AddSeconds(5) >= now;
-            if (!PetKamikazePolicy.ShouldTrigger(KamikazeArmed, Activated, inCombat,
-                Owner.CurrentHitPoints, Owner.MaxHitPoints, CurrentHitPoints, MaxHitPoints,
-                now, KamikazeCooldownUntil)) return;
+            if (!KamikazeArmed)
+            {
+                kamikazeRunning = false;
+                kamikazeTarget = null;
+                return false;
+            }
+            if (!IsValidKamikazeTarget(kamikazeTarget))
+            {
+                kamikazeRunning = false;
+                kamikazeTarget = FindKamikazeTarget();
+            }
+            if (!kamikazeRunning)
+            {
+                if (!PetKamikazePolicy.ShouldPursue(KamikazeArmed, Activated, inCombat,
+                    Owner.CurrentHitPoints, Owner.MaxHitPoints, CurrentHitPoints, MaxHitPoints,
+                    kamikazeTarget != null, now, KamikazeCooldownUntil)) return false;
+                kamikazeRunning = true;
+            }
+
+            var targetPosition = Movement.ActualPosition(kamikazeTarget);
+            var distance = Position.DistanceTo(targetPosition);
+            if (!PetKamikazePolicy.ShouldDetonate(true, distance))
+            {
+                if (!Moving || Destination.DistanceTo(targetPosition) > 75)
+                    Movement.Move(this, kamikazeTarget.Position);
+                return true;
+            }
 
             KamikazeArmed = false;
+            kamikazeRunning = false;
+            kamikazeTarget = null;
             KamikazeCooldownUntil = now.Add(PetKamikazePolicy.Cooldown);
             Owner.Settings.Cooldowns["pet_kamikaze"] = KamikazeCooldownUntil.ToString("yyyy-MM-dd HH:mm:ss");
             QueryManager.SavePlayer.Settings(Owner, "cooldowns", Owner.Settings.Cooldowns);
             Owner.SendPacket($"0|n|KAM|{Id}");
             SendPacketToInRangePlayers($"0|n|KAM|{Id}");
 
-            foreach (var target in InRangeCharacters.Values.ToList())
+            foreach (var target in Spacemap.Characters.Values.ToList())
                 ApplyKamikazeDamage(target);
 
             Owner.SendCommand(PetGearAddCommand.write(new PetGearTypeModule(PetGearTypeModule.KAMIKAZE), 1, 0, false));
             GearId = PetGearTypeModule.PASSIVE;
             Destroyed = true;
             Deactivate(true, true);
+            return true;
+        }
+
+        private Character FindKamikazeTarget()
+        {
+            var selected = Owner.SelectedCharacter;
+            if (IsValidKamikazeTarget(selected)) return selected;
+            return Owner.InRangeCharacters.Values
+                .Where(IsValidKamikazeTarget)
+                .OrderBy(target => Position.DistanceTo(target.Position))
+                .FirstOrDefault();
+        }
+
+        private bool IsValidKamikazeTarget(Character target)
+        {
+            return target != null && !target.Destroyed && !target.Invincible && target.Spacemap == Spacemap &&
+                (target is Player || target is Npc) && Owner.TargetDefinition(target, false) &&
+                (!(target is Player) || (target as Player).Attackable());
         }
 
         private void ApplyKamikazeDamage(Character target)
@@ -90,8 +139,9 @@ namespace Ow.Game.Objects
                 (target is Player && !(target as Player).Attackable())) return;
 
             var damage = PetKamikazePolicy.Damage;
-            var shieldDamage = Math.Min(target.CurrentShieldPoints, (int)(damage * target.ShieldAbsorption));
-            var hitpointDamage = Math.Min(target.CurrentHitPoints, damage - shieldDamage);
+            var split = PetDamagePolicy.SplitDamage(damage, target.CurrentShieldPoints);
+            var shieldDamage = split.Shield;
+            var hitpointDamage = Math.Min(target.CurrentHitPoints, split.Hitpoints);
             var hitCommand = AttackHitCommand.write(new AttackTypeModule(AttackTypeModule.KAMIKAZE),
                 Id, target.Id, target.CurrentHitPoints, target.CurrentShieldPoints,
                 target.CurrentNanoHull, damage, false);
@@ -155,42 +205,20 @@ namespace Ow.Game.Objects
             if ((Owner.Settings.InGameSettings.selectedLaser == AmmunitionManager.RSB_75 ? lastRSBAttackTime : lastAttackTime).AddSeconds(Owner.Settings.InGameSettings.selectedLaser == AmmunitionManager.RSB_75 ? 3 : 1) < DateTime.Now)
             {
                 int damageShd = 0, damageHp = 0;
+                var ammunitionDamage = LaserAmmunitionPolicy.ApplyDamage(Damage,
+                    Owner.Settings.InGameSettings.selectedLaser);
 
                 if (target is Spaceball)
                 {
                     var spaceball = target as Spaceball;
-                    spaceball.AddDamage(this, Damage);
-                }
-
-                double shieldAbsorb = System.Math.Abs(target.ShieldAbsorption - 1);
-
-                if (shieldAbsorb > 1)
-                    shieldAbsorb = 1;
-
-                if ((target.CurrentShieldPoints - Damage) >= 0)
-                {
-                    damageShd = (int)(Damage * shieldAbsorb);
-                    damageHp = Damage - damageShd;
-                }
-                else
-                {
-                    int newDamage = Damage - target.CurrentShieldPoints;
-                    damageShd = target.CurrentShieldPoints;
-                    damageHp = (int)(newDamage + (damageShd * shieldAbsorb));
-                }
-
-                if ((target.CurrentHitPoints - damageHp) < 0)
-                {
-                    damageHp = target.CurrentHitPoints;
+                    spaceball.AddDamage(this, ammunitionDamage);
                 }
 
                 var targetProtected = target is Player && !(target as Player).Attackable();
-                var effectiveDamage = PetDamagePolicy.EffectiveDamage(Damage, targetProtected);
-                if (targetProtected)
-                {
-                    damageShd = 0;
-                    damageHp = 0;
-                }
+                var effectiveDamage = PetDamagePolicy.EffectiveDamage(ammunitionDamage, targetProtected);
+                var split = PetDamagePolicy.SplitDamage(effectiveDamage, target.CurrentShieldPoints);
+                damageShd = split.Shield;
+                damageHp = Math.Min(target.CurrentHitPoints, split.Hitpoints);
 
                 if (Invisible)
                 {
@@ -236,7 +264,7 @@ namespace Ow.Game.Objects
             {
                 Activated = true;
 
-                CurrentHitPoints = 2500;
+                CurrentHitPoints = PetKamikazePolicy.ActivationHitpoints(CurrentHitPoints, MaxHitPoints);
 
                 SetPosition(Owner.Position);
                 Spacemap = Owner.Spacemap;
@@ -247,11 +275,63 @@ namespace Ow.Game.Objects
                 Initialization(GearId);
 
                 Spacemap.AddCharacter(this);
+                SynchronizeVisibility();
                 Program.TickManager.AddTick(this);
             }
             else
             {
                 Deactivate();
+            }
+        }
+
+        public void SynchronizeVisibility(Player viewer = null)
+        {
+            if (!Activated || Destroyed || Spacemap == null) return;
+            Invisible = Owner.Invisible;
+            var viewers = viewer != null ? new[] { viewer } : Spacemap.Characters.Values.OfType<Player>().ToArray();
+            foreach (var nearbyPlayer in viewers)
+            {
+                var sameMap = nearbyPlayer.Spacemap == Spacemap;
+                var distance = sameMap ? Position.DistanceTo(nearbyPlayer.Position) : double.MaxValue;
+                var duelParticipant = Owner.Storage.Duel != null &&
+                    Owner.Storage.Duel.Players.ContainsKey(nearbyPlayer.Id);
+                if (!PetVisibilityPolicy.ShouldSynchronize(Activated, Destroyed, sameMap, distance, duelParticipant)) continue;
+                var added = nearbyPlayer.AddInRangeCharacter(this);
+                AddInRangeCharacter(nearbyPlayer);
+                if (!added) SendActivationTo(nearbyPlayer);
+            }
+        }
+
+        public void SendActivationTo(Player viewer)
+        {
+            var relationType = Owner.Clan.Id != 0 && viewer.Clan.Id != 0
+                ? viewer.Clan.GetRelation(Owner.Clan)
+                : (short)0;
+            if (viewer == Owner)
+                viewer.SendCommand(PetHeroActivationCommand.write(Owner.Id, Id, 22, 3, Name,
+                    (short)Owner.FactionId, Owner.Clan.Id, 15, Owner.Clan.Tag, Position.X, Position.Y,
+                    Speed, new class_11d(class_11d.DEFAULT)));
+            else
+                viewer.SendCommand(PetActivationCommand.write(Owner.Id, Id, 22, 3, Name,
+                    (short)Owner.FactionId, Owner.Clan.Id, 15, Owner.Clan.Tag,
+                    new ClanRelationModule(relationType), Position.X, Position.Y, Speed, false, !Invisible,
+                    new class_11d(class_11d.DEFAULT)));
+            viewer.SendCommand(PetVisibilityCommand.write(Id, Invisible));
+            viewer.SendPacket(PetVisibilityPolicy.VisibilityPacket(Id, Invisible));
+        }
+
+        public void ForceSynchronizeVisibility(IEnumerable<Player> viewers)
+        {
+            if (!Activated || Destroyed || Spacemap == null) return;
+
+            foreach (var viewer in viewers)
+            {
+                var sameMap = viewer != null && viewer.Spacemap == Spacemap;
+                if (!PetVisibilityPolicy.ShouldForceRecreateAfterArenaLoad(Activated, Destroyed, sameMap)) continue;
+
+                viewer.SendCommand(ShipRemoveCommand.write(Id));
+                SendActivationTo(viewer);
+                viewer.SendCommand(MoveCommand.write(Id, Position.X, Position.Y, 0));
             }
         }
 
@@ -264,6 +344,8 @@ namespace Ow.Game.Objects
                 if (Owner.Data.uridium >= cost)
                 {
                     Destroyed = false;
+                    CurrentHitPoints = MaxHitPoints;
+                    CurrentShieldPoints = MaxShieldPoints;
                     Owner.ChangeData(DataType.URIDIUM, cost, ChangeType.DECREASE);
                     Owner.SendCommand(PetRepairCompleteCommand.write());
                     Owner.Settings.InGameSettings.petDestroyed = false;
@@ -295,6 +377,8 @@ namespace Ow.Game.Objects
                     else Owner.SendPacket("0|A|STM|msg_pet_deactivated");
 
                     Activated = false;
+                    kamikazeTarget = null;
+                    kamikazeRunning = false;
 
                     Deselection();
                     Spacemap.RemoveCharacter(this);
@@ -343,10 +427,14 @@ namespace Ow.Game.Objects
                 case PetGearTypeModule.PASSIVE:
                     GuardModeActive = false;
                     KamikazeArmed = false;
+                    kamikazeTarget = null;
+                    kamikazeRunning = false;
                     break;
                 case PetGearTypeModule.GUARD:
                     GuardModeActive = true;
                     KamikazeArmed = false;
+                    kamikazeTarget = null;
+                    kamikazeRunning = false;
                     break;
                 case PetGearTypeModule.KAMIKAZE:
                     if (DateTime.Now < KamikazeCooldownUntil)

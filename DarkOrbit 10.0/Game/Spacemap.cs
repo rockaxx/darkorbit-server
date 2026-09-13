@@ -382,6 +382,9 @@ namespace Ow.Game
             if (petActivated)
                 player.Pet.Activate();
 
+            foreach (var activePet in Characters.Values.OfType<Pet>())
+                activePet.SynchronizeVisibility(player);
+
             if (sendSettings)
                 LoginRequestHandler.SendSettings(player);
         }

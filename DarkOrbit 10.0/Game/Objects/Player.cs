@@ -541,13 +541,18 @@ namespace Ow.Game.Objects
         public void SetTitle(string title, bool permanent = false)
         {
             Title = title;
-            var packet = Title != "" ? $"0|n|t|{Id}|1|{Title}" : $"0|n|trm|{Id}";
+            var packet = CompetitiveRatingPolicy.TitlePacket(Id, Title);
             SendPacket(packet);
             SendPacketToInRangePlayers(packet);
 
             if (permanent)
                 using (var mySqlClient = SqlDatabaseManager.GetClient())
                     mySqlClient.ExecuteNonQuery($"UPDATE player_accounts SET title = '{Title}' WHERE userId = {Id}");
+        }
+
+        public short GetTitleType()
+        {
+            return CompetitiveRatingPolicy.TitleType(Title);
         }
 
         public byte[] GetBeaconCommand()

@@ -66,22 +66,13 @@ namespace Ow.Game.Objects
 
                 int damageShd = 0, damageHp = 0;
 
-                double shieldAbsorb = System.Math.Abs(target.ShieldAbsorption - 0);
-
-                if (shieldAbsorb > 1)
-                    shieldAbsorb = 1;
-
-                if ((target.CurrentShieldPoints - damage) >= 0)
-                {
-                    damageShd = (int)(damage * shieldAbsorb);
-                    damageHp = damage - damageShd;
-                }
-                else
-                {
-                    int newDamage = damage - target.CurrentShieldPoints;
-                    damageShd = target.CurrentShieldPoints;
-                    damageHp = (int)(newDamage + (damageShd * shieldAbsorb));
-                }
+                var targetPlayer = target as Player;
+                var crabFormation = targetPlayer != null &&
+                    targetPlayer.Settings.InGameSettings.selectedFormation == DroneManager.CRAB_FORMATION;
+                var split = ShieldDamagePolicy.Calculate(damage, target.CurrentShieldPoints,
+                    target.ShieldAbsorption, 0, crabFormation);
+                damageShd = split.Shield;
+                damageHp = split.Hitpoints;
 
                 if ((target.CurrentHitPoints - damageHp) < 0)
                 {

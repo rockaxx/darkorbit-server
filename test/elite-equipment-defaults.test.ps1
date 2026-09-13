@@ -5,6 +5,7 @@ $starter = Get-Content -LiteralPath (Join-Path $root 'scripts/starter-profile.ph
 $booster = Get-Content -LiteralPath (Join-Path $root 'DarkOrbit 10.0/Game/Objects/Players/Managers/BoosterManager.cs') -Raw
 $query = Get-Content -LiteralPath (Join-Path $root 'DarkOrbit 10.0/Managers/QueryManager.cs') -Raw
 $installer = Get-Content -LiteralPath (Join-Path $root 'scripts/apply-web-ui.ps1') -Raw
+$migration = Get-Content -LiteralPath (Join-Path $root 'scripts/apply-elite-defaults.php') -Raw
 $start = Get-Content -LiteralPath (Join-Path $root 'scripts/start.ps1') -Raw
 
 if ($starter -notmatch "'boosters'\s*=>") { throw 'Starter profile has no permanent boosters.' }
@@ -23,6 +24,6 @@ if ($starter -notmatch 'equipment_extra_cpu_aim-02') { throw 'Starter AIM CPU is
 if ($starter -notmatch 'ammunition_laser_cbo-100' -or $starter -notmatch 'ammunition_rocketlauncher_cbr') { throw 'Starter CBO/CBR ammunition is missing.' }
 if ($installer -match '\$generalPet' -or $installer -match '\$petConfig1') { throw 'Legacy Flash Hangar still receives unsupported PET data.' }
 if ($installer -notmatch '\$petLaserClear' -or $installer -notmatch '\$petGeneratorClear') { throw 'Legacy PET clearConfig cleanup is not durable.' }
-if ($installer -notmatch 'config1_pet_lasers' -or $installer -notmatch 'pet_generators') { throw 'PET equipment persistence patch is not durable.' }
+if ($migration -notmatch 'config1_pet_lasers' -or $migration -notmatch 'pet_generators') { throw 'PET equipment persistence migration is not durable.' }
 
 Write-Host 'PASS: elite LV16 equipment and permanent booster policy.'

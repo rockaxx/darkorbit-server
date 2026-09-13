@@ -140,59 +140,59 @@ namespace Ow.Game.Objects.Players.Managers
 
             UpdateAttacker(enemy, Player);
 
-            switch (GetSelectedRocket())
+            var selectedRocket = GetSelectedRocket();
+            if (RocketEffectPolicy.IsEffectRocket(selectedRocket))
             {
-                case 5:
-                case 6:
-                case 18:
-                    if (Player.RocketMissProbability < Randoms.random.NextDouble() && (!(enemy is Player) || (enemy is Player && (enemy as Player).Attackable())))
+                if (Player.RocketMissProbability < Randoms.random.NextDouble() &&
+                    (!(enemy is Player) || (enemy is Player && (enemy as Player).Attackable())))
+                {
+                    switch (selectedRocket)
                     {
-                        switch (GetSelectedRocket())
-                        {
-                            case 5:
-                                enemy.Storage.underPLD8 = true;
-                                enemy.Storage.underPLD8Time = DateTime.Now;
+                        case 5:
+                            enemy.Storage.underPLD8 = true;
+                            enemy.Storage.underPLD8Time = DateTime.Now;
 
-                                if (enemy is Player)
-                                    (enemy as Player).SendPacket("0|n|MAL|SET|" + enemy.Id + "");
+                            if (enemy is Player)
+                                (enemy as Player).SendPacket("0|n|MAL|SET|" + enemy.Id + "");
 
-                                enemy.SendPacketToInRangePlayers("0|n|MAL|SET|" + enemy.Id + "");
-                                break;
-                            case 6:
-                                var shipId = Ship.GetRandomShipId(enemy.Ship.Id);
-                                enemy.AddVisualModifier(VisualModifierCommand.WIZARD_ATTACK, 0, GameManager.GetShip(shipId).LootId, 0, true);
-                                break;
-                            case 18:
-                                enemy.Storage.underR_IC3 = true;
-                                enemy.Storage.underR_IC3Time = DateTime.Now;
+                            enemy.SendPacketToInRangePlayers("0|n|MAL|SET|" + enemy.Id + "");
+                            break;
+                        case 6:
+                            var shipId = Ship.GetRandomShipId(enemy.Ship.Id);
+                            enemy.AddVisualModifier(VisualModifierCommand.WIZARD_ATTACK, 0, GameManager.GetShip(shipId).LootId, 0, true);
+                            break;
+                        case 18:
+                            enemy.Storage.underR_IC3 = true;
+                            enemy.Storage.underR_IC3Time = DateTime.Now;
 
-                                if (enemy is Player)
-                                {
-                                    (enemy as Player).SendPacket("0|n|fx|start|ICY_CUBE|" + enemy.Id + "");
-                                    (enemy as Player).SendCommand(SetSpeedCommand.write(enemy.Speed, enemy.Speed));
-                                }
+                            if (enemy is Player)
+                            {
+                                (enemy as Player).SendPacket("0|n|fx|start|ICY_CUBE|" + enemy.Id + "");
+                                (enemy as Player).SendCommand(SetSpeedCommand.write(enemy.Speed, enemy.Speed));
+                            }
 
-                                enemy.SendPacketToInRangePlayers("0|n|fx|start|ICY_CUBE|" + enemy.Id + "");
-                                break;
-                            case 10:
-                                if (enemy is Player enemyPlayer)
-                                {
-                                    enemyPlayer.Storage.underDCR_250 = true;
-                                    enemyPlayer.Storage.underDCR_250Time = DateTime.Now;
+                            enemy.SendPacketToInRangePlayers("0|n|fx|start|ICY_CUBE|" + enemy.Id + "");
+                            break;
+                        case 10:
+                            if (enemy is Player enemyPlayer)
+                            {
+                                enemyPlayer.Storage.underDCR_250 = true;
+                                enemyPlayer.Storage.underDCR_250Time = DateTime.Now;
 
-                                    enemyPlayer.SendPacket("0|n|fx|start|SABOTEUR_DEBUFF|" + enemyPlayer.Id + "");
-                                    enemyPlayer.SendCommand(SetSpeedCommand.write(enemyPlayer.Speed, enemyPlayer.Speed));
+                                enemyPlayer.SendPacket("0|n|fx|start|SABOTEUR_DEBUFF|" + enemyPlayer.Id + "");
+                                enemyPlayer.SendCommand(SetSpeedCommand.write(enemyPlayer.Speed, enemyPlayer.Speed));
 
-                                    enemyPlayer.SendPacketToInRangePlayers("0|n|fx|start|SABOTEUR_DEBUFF|" + enemyPlayer.Id + "");
-                                }
-                                break;
-                        }
-                    } else AttackMissed(enemy, DamageType.ROCKET);
-                    break;
-                default:
-                    var damage = RandomizeDamage(Player.RocketDamage, Player.RocketMissProbability);
-                    Damage(Player, enemy, DamageType.ROCKET, damage, 0);
-                    break;
+                                enemyPlayer.SendPacketToInRangePlayers("0|n|fx|start|SABOTEUR_DEBUFF|" + enemyPlayer.Id + "");
+                            }
+                            break;
+                    }
+                }
+                else AttackMissed(enemy, DamageType.ROCKET);
+            }
+            else
+            {
+                var damage = RandomizeDamage(Player.RocketDamage, Player.RocketMissProbability);
+                Damage(Player, enemy, DamageType.ROCKET, damage, 0);
             }
         }
 
@@ -455,22 +455,13 @@ namespace Ow.Game.Objects.Players.Managers
                 spaceball.AddDamage(attacker, damage);
             }
 
-            double shieldAbsorb = System.Math.Abs(target.ShieldAbsorption - shieldPenetration);
-
-            if (shieldAbsorb > 1)
-                shieldAbsorb = 1;
-
-            if ((target.CurrentShieldPoints - damage) >= 0)
-            {
-                damageShd = (int)(damage * shieldAbsorb);
-                damageHp = damage - damageShd;
-            }
-            else
-            {
-                int newDamage = damage - target.CurrentShieldPoints;
-                damageShd = target.CurrentShieldPoints;
-                damageHp = (int)(newDamage + (damageShd * shieldAbsorb));
-            }
+            var targetPlayer = target as Player;
+            var crabFormation = targetPlayer != null &&
+                targetPlayer.Settings.InGameSettings.selectedFormation == DroneManager.CRAB_FORMATION;
+            var split = ShieldDamagePolicy.Calculate(damage, target.CurrentShieldPoints,
+                target.ShieldAbsorption, shieldPenetration, crabFormation);
+            damageShd = split.Shield;
+            damageHp = split.Hitpoints;
 
             if ((target.CurrentHitPoints - damageHp) < 0)
             {
@@ -595,6 +586,17 @@ namespace Ow.Game.Objects.Players.Managers
             }
 
             target.LastCombatTime = DateTime.Now;
+
+            var targetPlayer = target as Player;
+            var crabBlocksPlayerDamage = attacker != target && targetPlayer != null &&
+                targetPlayer.CurrentShieldPoints > 0 &&
+                targetPlayer.Settings.InGameSettings.selectedFormation == DroneManager.CRAB_FORMATION;
+            if (crabBlocksPlayerDamage)
+            {
+                damage = Math.Min(damage, target.CurrentShieldPoints);
+                toHp = false;
+                toShd = true;
+            }
 
             if (toHp && toDestroy && (damage >= target.CurrentHitPoints || target.CurrentHitPoints <= 0))
             {
@@ -756,25 +758,7 @@ namespace Ow.Game.Objects.Players.Managers
 
         private int GetDamageMultiplier()
         {
-
-            switch (Player.Settings.InGameSettings.selectedLaser)
-            {
-                case AmmunitionManager.LCB_10:
-                    return 1;
-                case AmmunitionManager.MCB_25:
-                    return 2;
-                case AmmunitionManager.CBO_100:
-                case AmmunitionManager.MCB_50:
-                    return 3;
-                case AmmunitionManager.UCB_100:
-                    return 4;
-                case AmmunitionManager.RSB_75:
-                    return 5;
-                case AmmunitionManager.SAB_50:
-                    return 2;
-                default:
-                    return 1;
-            }
+            return LaserAmmunitionPolicy.GetMultiplier(Player.Settings.InGameSettings.selectedLaser);
         }
 
         public int GetSelectedLaser()
