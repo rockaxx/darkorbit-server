@@ -587,18 +587,20 @@ namespace Ow.Game.Objects.Players.Managers
 
             target.LastCombatTime = DateTime.Now;
 
+            var hitpointDamage = toHp ? damage : 0;
+            var shieldDamage = toShd ? damage : 0;
             var targetPlayer = target as Player;
-            var crabBlocksPlayerDamage = attacker != target && targetPlayer != null &&
+            var crabAbsorbsPlayerDamage = toHp && attacker != target && targetPlayer != null &&
                 targetPlayer.CurrentShieldPoints > 0 &&
                 targetPlayer.Settings.InGameSettings.selectedFormation == DroneManager.CRAB_FORMATION;
-            if (crabBlocksPlayerDamage)
+            if (crabAbsorbsPlayerDamage)
             {
-                damage = Math.Min(damage, target.CurrentShieldPoints);
-                toHp = false;
-                toShd = true;
+                var split = ShieldDamagePolicy.Calculate(damage, target.CurrentShieldPoints, 0.8, 0, true);
+                hitpointDamage = split.Hitpoints;
+                shieldDamage = split.Shield;
             }
 
-            if (toHp && toDestroy && (damage >= target.CurrentHitPoints || target.CurrentHitPoints <= 0))
+            if (toHp && toDestroy && (hitpointDamage >= target.CurrentHitPoints || target.CurrentHitPoints <= 0))
             {
                 if (damageType == DamageType.RADIATION)
                     target.Destroy(null, DestructionType.RADIATION);
@@ -611,21 +613,21 @@ namespace Ow.Game.Objects.Players.Managers
             {
                 if (target.CurrentNanoHull > 0)
                 {
-                    if (target.CurrentNanoHull - damage < 0)
+                    if (target.CurrentNanoHull - hitpointDamage < 0)
                     {
-                        var nanoDamage = damage - target.CurrentNanoHull;
+                        var nanoDamage = hitpointDamage - target.CurrentNanoHull;
                         target.CurrentNanoHull = 0;
                         target.CurrentHitPoints -= nanoDamage;
                     }
                     else
-                        target.CurrentNanoHull -= damage;
+                        target.CurrentNanoHull -= hitpointDamage;
                 }
                 else
-                    target.CurrentHitPoints -= damage;
+                    target.CurrentHitPoints -= hitpointDamage;
             }
 
-            if (toShd)
-                target.CurrentShieldPoints -= damage;
+            if (shieldDamage > 0)
+                target.CurrentShieldPoints -= shieldDamage;
 
             var attackHitCommand =
                     AttackHitCommand.write(new AttackTypeModule((short)damageType), attacker.Id,

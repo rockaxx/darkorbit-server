@@ -15,12 +15,12 @@ internal static class ShieldDamagePolicyTest
             "normal formations must retain shield penetration");
 
         var crab = ShieldDamagePolicy.Calculate(1000, 5000, 1.0, 0.4, true);
-        Check(crab.Shield == 1000 && crab.Hitpoints == 0,
-            "Crab must block all HP penetration while shield remains");
+        Check(crab.Shield == 800 && crab.Hitpoints == 200,
+            "Crab must absorb 80 percent, allowing 20 percent into HP");
 
         var crabOverflow = ShieldDamagePolicy.Calculate(1000, 200, 1.0, 0.4, true);
-        Check(crabOverflow.Shield == 200 && crabOverflow.Hitpoints == 0,
-            "the hit that depletes Crab shield must not overflow into HP");
+        Check(crabOverflow.Shield == 200 && crabOverflow.Hitpoints == 800,
+            "damage exceeding the remaining Crab shield must reach HP");
 
         var crabWithoutShield = ShieldDamagePolicy.Calculate(1000, 0, 1.0, 0.4, true);
         Check(crabWithoutShield.Shield == 0 && crabWithoutShield.Hitpoints == 1000,

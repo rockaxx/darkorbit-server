@@ -23,9 +23,10 @@ namespace Ow.Game.Objects.Players.Managers
             currentShield = Math.Max(0, currentShield);
 
             if (crabFormation)
-                return currentShield > 0
-                    ? new ShieldDamageResult(Math.Min(damage, currentShield), 0)
-                    : new ShieldDamageResult(0, damage);
+            {
+                var shieldDamage = Math.Min((int)(damage * 0.8), currentShield);
+                return new ShieldDamageResult(shieldDamage, damage - shieldDamage);
+            }
 
             var shieldAbsorb = Math.Abs(shieldAbsorption - shieldPenetration);
             shieldAbsorb = Math.Min(1, shieldAbsorb);

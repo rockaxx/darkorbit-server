@@ -195,7 +195,11 @@ if (!$map.Contains('css/arena-ui.css')) {
 if (!$map.Contains('js/arena-ui.js')) {
     $map = $map.Replace('</body>', '  <script src="<?php echo DOMAIN; ?>js/arena-ui.js"></script>' + "`r`n</body>")
 }
-if (!$map.Contains('css/arena-ui.css') -or !$map.Contains('js/arena-ui.js') -or !$map.Contains("`$player['version'] ? 1 : 2")) {
+$hasDynamicDisplayMode = [Text.RegularExpressions.Regex]::IsMatch(
+    $map,
+    '\$player\[''version''\].*\?.*[''"]?1[''"]?.*:.*[''"]?2[''"]?'
+)
+if (!$map.Contains('css/arena-ui.css') -or !$map.Contains('js/arena-ui.js') -or !$hasDynamicDisplayMode) {
     throw 'Could not install the 1v1 Arena overlay.'
 }
 [IO.File]::WriteAllText($mapPath, $map, [Text.UTF8Encoding]::new($false))

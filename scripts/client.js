@@ -2,6 +2,7 @@ const { app, BrowserWindow, session, Menu, ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { nextZoomFactor } = require('./client-zoom');
+const { readProfileForce2D, createDisplayModeController, saveDisplayMode } = require('./flash-display-mode');
 const local = path.resolve(__dirname, '../.local');
 const origin = 'http://127.0.0.1';
 app.setPath('userData', path.join(local, 'client-profile'));
@@ -11,17 +12,45 @@ app.commandLine.appendSwitch('allow-outdated-plugins');
 const log = message => fs.appendFileSync(path.join(local, 'logs/client.log'), `${new Date().toISOString()} ${message}\n`);
 let window;
 let gameForce2D = null;
+let displayMode = null, closingGame = null;
 app.whenReady().then(async () => {
   session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
     const allowed = details.url.startsWith(origin + '/') || details.url.startsWith('data:') || details.url.startsWith('blob:');
     if (!allowed) log('Blocked external URL: ' + details.url);
-    callback({ cancel: !allowed });
+    if (allowed && displayMode && new URL(details.url).pathname === '/map-revolution') {
+      displayMode.synchronize().then(() => callback({ cancel: false }), error => {
+        log(`Game reload blocked: ${error.message}`);
+        callback({ cancel: true });
+      });
+    } else callback({ cancel: !allowed });
   });
   session.defaultSession.webRequest.onCompleted(details => {
     if (details.statusCode >= 400) log(`HTTP ${details.statusCode} ${details.url}`);
   });
   window = new BrowserWindow({ width: 1280, height: 850, title: 'DarkOrbit 10 - Local',
     webPreferences: { plugins: true, preload: path.join(__dirname, 'game-zoom-preload.js'), nodeIntegration: false, contextIsolation: true } });
+  displayMode = createDisplayModeController({
+    readMode: () => readProfileForce2D(app.getPath('userData'), origin),
+    saveMode: async mode => {
+      await saveDisplayMode(origin, session.defaultSession.cookies, mode);
+      log(`Display mode saved: ${mode ? '2D' : '3D'}`);
+    }
+  });
+  const modeTimer = setInterval(() => {
+    displayMode.synchronize().catch(error => log(`Display mode save failed: ${error.message}`));
+  }, 250);
+  window.once('closed', () => clearInterval(modeTimer));
+  ipcMain.on('game-close-request', event => {
+    if (event.sender !== window.webContents || closingGame) return;
+    closingGame = (async () => {
+      await new Promise(resolve => setTimeout(resolve, 250));
+      await displayMode.synchronize();
+      const action = displayMode.closeAction();
+      log(`Game requested close: ${action}`);
+      await window.loadURL(origin + (action === 'reload-game' ? '/map-revolution?clientReload=' + Date.now() : '/'));
+    })().catch(error => log(`Game close handling failed: ${error.message}`))
+      .finally(() => { closingGame = null; });
+  });
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     {label:'Hra', submenu:[
       {label:'Mapa', accelerator:'F2', click:()=>window.loadURL(origin+'/map-revolution')},
@@ -34,10 +63,14 @@ app.whenReady().then(async () => {
   ]));
   window.webContents.on('console-message', (_, level, message) => log(`console ${level}: ${message}`));
   window.webContents.on('did-finish-load', async () => {
-    if (!window.webContents.getURL().includes('/map-revolution')) return;
+    if (!window.webContents.getURL().includes('/map-revolution')) {
+      displayMode.pageLoaded(null);
+      return;
+    }
     const html = await window.webContents.executeJavaScript('document.documentElement.innerHTML');
     const match = html.match(/"display2d"\s*:\s*"([12])"/);
     gameForce2D = match ? match[1] === '2' : null;
+    displayMode.pageLoaded(gameForce2D);
   });
   window.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'mouseWheel' || !input.control || !window.webContents.getURL().includes('/map-revolution')) return;

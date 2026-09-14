@@ -361,7 +361,7 @@ namespace Ow.Game.Objects
                 switch (SettingsManager.Player.Settings.InGameSettings.selectedFormation)
                 {
                     case DroneManager.CRAB_FORMATION:
-                        value += 0.2;
+                        value = 0.8;
                         break;
                     case DroneManager.BARRAGE_FORMATION:
                         value -= 0.15;

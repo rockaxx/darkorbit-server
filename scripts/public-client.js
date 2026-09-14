@@ -2,7 +2,7 @@ const { app, BrowserWindow, BrowserView, ipcMain, Menu, dialog } = require('elec
 const fs = require('fs');
 const path = require('path');
 const { startTransport } = require('./client-transport');
-const { readForce2D, findLatestSol, resolveGameCloseAction } = require('./flash-display-mode');
+const { readProfileForce2D, createDisplayModeController, saveDisplayMode } = require('./flash-display-mode');
 const { nextZoomFactor } = require('./client-zoom');
 app.setPath('userData', path.join(app.getPath('appData'), 'DarkOrbit-Tunnel-Client'));
 fs.mkdirSync(app.getPath('userData'), { recursive: true });
@@ -20,32 +20,45 @@ app.whenReady().then(async () => {
   let active = 'home';
   let chromeHeight = 48;
   let gameForce2D = null;
+  let displayMode = null, closingGame = null;
   const gameUrl = () => transport.origin + '/map-revolution?clientReload=' + Date.now();
+  window.webContents.session.webRequest.onBeforeRequest((details, callback) => {
+    if (!displayMode || !views.game || details.webContentsId !== views.game.webContents.id ||
+        new URL(details.url).origin !== transport.origin || new URL(details.url).pathname !== '/map-revolution') {
+      callback({ cancel: false });
+      return;
+    }
+    // Includes F5, menu refresh and page-triggered navigation. Persist before PHP renders flashvars.
+    displayMode.synchronize().then(() => callback({ cancel: false }), error => {
+      log(`Game reload blocked: ${error.message}`);
+      callback({ cancel: true });
+    });
+  });
   async function closeGameTab(view) {
+    if (views.game !== view) return;
     if (window.getBrowserView() === view) window.removeBrowserView(view);
     view.webContents.destroy();
     delete views.game;
+    displayMode = null;
+    gameForce2D = null;
     select('home');
   }
   async function handleGameClose(view) {
     await new Promise(resolve => setTimeout(resolve, 250));
-    const solRoot = path.join(app.getPath('userData'), 'Pepper Data', 'Shockwave Flash', 'WritableRoot', '#SharedObjects');
-    const solPath = findLatestSol(solRoot);
-    const force2D = solPath ? readForce2D(fs.readFileSync(solPath)) : null;
-    const action = resolveGameCloseAction(force2D, gameForce2D);
-    log(`Game requested close: ${action}; Flash force2D=${force2D}; page force2D=${gameForce2D}`);
+    if (views.game !== view || view.webContents.isDestroyed()) return;
+    await displayMode.synchronize();
+    const action = displayMode.closeAction();
+    log(`Game requested close: ${action}`);
     if (action !== 'reload-game') { await closeGameTab(view); return; }
-
-    const version = force2D ? 'false' : 'true';
-    const result = await view.webContents.executeJavaScript(`fetch('/api/', {
-      method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: new URLSearchParams({action: 'change_version', version: ${JSON.stringify(version)}})
-    }).then(response => response.json())`);
-    if (!result.status) throw new Error(result.message || 'Display mode could not be saved.');
-    gameForce2D = force2D;
-    await view.webContents.session.clearCache();
     await view.webContents.loadURL(gameUrl());
     select('game');
+  }
+  function requestGameClose(view) {
+    if (closingGame) return;
+    closingGame = handleGameClose(view).catch(error => {
+      log(`Game close handling failed: ${error.stack || error.message}`);
+      dialog.showErrorBox('Režim sa nepodarilo uložiť', 'Herná karta zostala otvorená. Skús obnoviť kartu.');
+    }).finally(() => { closingGame = null; });
   }
   function select(tab) {
     if (!['home', 'game'].includes(tab)) return;
@@ -58,6 +71,20 @@ app.whenReady().then(async () => {
         backgroundThrottling: false
       } });
       views[tab] = view;
+      if (tab === 'game') {
+        const controller = createDisplayModeController({
+          readMode: () => readProfileForce2D(app.getPath('userData'), transport.origin),
+          saveMode: async mode => {
+            await saveDisplayMode(transport.origin, view.webContents.session.cookies, mode);
+            log(`Display mode saved: ${mode ? '2D' : '3D'}`);
+          }
+        });
+        displayMode = controller;
+        const timer = setInterval(() => {
+          controller.synchronize().catch(error => log(`Display mode save failed: ${error.message}`));
+        }, 250);
+        view.webContents.once('destroyed', () => clearInterval(timer));
+      }
       view.webContents.on('new-window', (event, url) => {
         event.preventDefault();
         if (url.startsWith(transport.origin + '/map-revolution')) select('game');
@@ -84,12 +111,13 @@ app.whenReady().then(async () => {
           const html = await view.webContents.executeJavaScript('document.documentElement.innerHTML');
           const match = html.match(/"display2d"\s*:\s*"([12])"/);
           gameForce2D = match ? match[1] === '2' : null;
+          displayMode.pageLoaded(gameForce2D);
         } catch (error) { log(`Display mode read failed: ${error.message}`); }
       });
       view.webContents.on('close', event => {
         if (tab !== 'game') return;
         event.preventDefault();
-        handleGameClose(view).catch(error => { log(`Game close handling failed: ${error.stack || error.message}`); closeGameTab(view); });
+        requestGameClose(view);
       });
       view.webContents.on('plugin-crashed', () => log('Flash plugin crashed'));
       view.webContents.loadURL(tab === 'game' ? gameUrl() : transport.origin + '/');
@@ -98,6 +126,9 @@ app.whenReady().then(async () => {
     resize(); window.webContents.send('active-tab', tab);
   }
   function resize() { const [width, height] = window.getContentSize(); if (views[active]) views[active].setBounds({ x: 0, y: chromeHeight, width, height: Math.max(0, height - chromeHeight) }); }
+  ipcMain.on('game-close-request', event => {
+    if (views.game && event.sender === views.game.webContents) requestGameClose(views.game);
+  });
   ipcMain.on('select-tab', (event, tab) => { if (event.sender === window.webContents) select(tab); });
   ipcMain.on('game-zoom-wheel', (event, deltaY) => {
     const view = views.game;

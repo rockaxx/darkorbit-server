@@ -85,11 +85,20 @@ namespace Ow.Game.Objects
             if (attackable is Character character)
             {
                 if (character == null || character.Destroyed) return false;
+                if (character is Pet inactivePet && !inactivePet.Activated) return false;
 
                 if (this is Player player)
-                {                 
-                    if (Duel.InDuel(player) && player.Storage.Duel?.GetOpponent(player) != attackable)
-                        return false;
+                {
+                    var duel = player.Storage.Duel;
+                    if (duel != null && Duel.InDuel(player))
+                    {
+                        var opponent = duel.GetOpponent(player);
+                        var pet = character as Pet;
+                        // The ticker uses this filter to retain both the entity and its selection entry.
+                        if (character != opponent &&
+                            !(pet != null && (pet.Owner == player || pet.Owner == opponent)))
+                            return false;
+                    }
                 }
             }
             if (range == -1 || attackable.Spacemap.Options.RangeDisabled) return true;
