@@ -47,6 +47,7 @@ function competitiveTryMatch(mysqli $db, int $userId): ?array {
             FROM player_competitive_queue q JOIN player_competitive_stats s ON s.userId=q.userId
             WHERE q.userId=$userId")->fetch_assoc();
         if (!$mine) return null;
+        if (Socket::Get('HasAvailableDuelArena', ['Return'=>false]) !== true) return null;
         $myElo = (int)$mine['elo'];
         $myRange = min(1000, 100 + intdiv(max(0, (int)$mine['waited']), 10) * 50);
 

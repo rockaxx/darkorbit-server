@@ -89,8 +89,8 @@ namespace Ow.Game.Objects
             var distance = Position.DistanceTo(targetPosition);
             if (!PetKamikazePolicy.ShouldDetonate(true, distance))
             {
-                if (!Moving || Destination.DistanceTo(targetPosition) > 75)
-                    Movement.Move(this, kamikazeTarget.Position);
+                if (!Moving || Destination.DistanceTo(targetPosition) > 25)
+                    Movement.Move(this, targetPosition);
                 return true;
             }
 
@@ -126,7 +126,7 @@ namespace Ow.Game.Objects
         private bool IsValidKamikazeTarget(Character target)
         {
             return target != null && !target.Destroyed && !target.Invincible && target.Spacemap == Spacemap &&
-                (target is Player || target is Npc) && Owner.TargetDefinition(target, false) &&
+                (target is Player || target is Npc) && Owner.TargetDefinition(target, false, false, true) &&
                 (!(target is Player) || (target as Player).Attackable());
         }
 
@@ -134,8 +134,8 @@ namespace Ow.Game.Objects
         {
             if (target == null || target.Destroyed || target.Invincible ||
                 (!(target is Player) && !(target is Npc)) ||
-                !PetKamikazePolicy.IsInBlastRadius(Position.DistanceTo(target.Position)) ||
-                !Owner.TargetDefinition(target, false) ||
+                !PetKamikazePolicy.IsInBlastRadius(Position.DistanceTo(Movement.ActualPosition(target))) ||
+                !Owner.TargetDefinition(target, false, false, true) ||
                 (target is Player && !(target as Player).Attackable())) return;
 
             var damage = PetKamikazePolicy.Damage;
@@ -444,11 +444,25 @@ namespace Ow.Game.Objects
                     }
                     GuardModeActive = false;
                     KamikazeArmed = true;
+                    BeginKamikazePursuit();
                     break;
             }
             GearId = gearId;
 
             Owner.SendCommand(PetGearSelectCommand.write(new PetGearTypeModule(gearId), new List<int>()));
+        }
+
+        private void BeginKamikazePursuit()
+        {
+            kamikazeTarget = FindKamikazeTarget();
+            kamikazeRunning = PetKamikazePolicy.ShouldPursue(KamikazeArmed, Activated, false,
+                Owner.CurrentHitPoints, Owner.MaxHitPoints, CurrentHitPoints, MaxHitPoints,
+                kamikazeTarget != null, DateTime.Now, KamikazeCooldownUntil);
+            if (!kamikazeRunning) return;
+
+            Movement.ActualPosition(this);
+            var targetPosition = Movement.ActualPosition(kamikazeTarget);
+            Movement.Move(this, targetPosition);
         }
 
         private void LoadKamikazeCooldown()

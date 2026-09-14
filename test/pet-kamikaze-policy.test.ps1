@@ -18,9 +18,15 @@ $pet = Get-Content (Join-Path $root 'DarkOrbit 10.0/Game/Objects/Pet.cs') -Raw
 foreach ($needle in @('CheckKamikaze()', 'PetGearTypeModule.KAMIKAZE', 'AttackTypeModule.KAMIKAZE', 'Deactivate(true, true)', 'Settings.Cooldowns["pet_kamikaze"]')) {
     if ($pet -notmatch [regex]::Escape($needle)) { throw "PET integration missing: $needle" }
 }
-foreach ($needle in @('ShouldPursue', 'ShouldDetonate', 'Movement.Move(this, kamikazeTarget.Position)', 'ActivationHitpoints')) {
+foreach ($needle in @('ShouldPursue', 'ShouldDetonate', 'Movement.Move(this, targetPosition)', 'BeginKamikazePursuit()', 'ActivationHitpoints')) {
     if ($pet -notmatch [regex]::Escape($needle)) { throw "PET pursuit integration missing: $needle" }
 }
+if ($pet -notmatch 'IsInBlastRadius\(Position\.DistanceTo\(Movement\.ActualPosition\(target\)\)\)') {
+    throw 'PET Kamikaze damage does not use the moving target current position.'
+}
+$attackable = Get-Content (Join-Path $root 'DarkOrbit 10.0/Game/Objects/Attackable.cs') -Raw
+if ($attackable -notmatch 'bool ignoreRange = false') { throw 'Attack validation cannot ignore only the owner range for pursuing PET Kamikaze.' }
+if ($pet -notmatch 'TargetDefinition\(target, false, false, true\)') { throw 'PET Kamikaze is still limited by the owner attack range.' }
 $spacemap = Get-Content (Join-Path $root 'DarkOrbit 10.0/Game/Spacemap.cs') -Raw
 if ($pet -notmatch 'SynchronizeVisibility') { throw 'PET activation does not synchronize its map visibility.' }
 if ($spacemap -notmatch 'SynchronizeVisibility') { throw 'Map jumps do not synchronize already active PETs.' }

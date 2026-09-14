@@ -11,7 +11,7 @@ $start = Get-Content -LiteralPath (Join-Path $root 'scripts/start.ps1') -Raw
 if ($starter -notmatch "'boosters'\s*=>") { throw 'Starter profile has no permanent boosters.' }
 if ($booster -notmatch 'EnsureEliteBoosters') { throw 'Existing accounts do not receive elite boosters.' }
 if ($booster -notmatch 'boosters\[k\]\.Seconds\s*<\s*0') { throw 'Permanent boosters would expire.' }
-if ($booster -notmatch 'DMGM_1[\s\S]{0,120}percentage\s*=\s*5') { throw 'Damage booster total cannot reach exactly 25%.' }
+if ($booster -notmatch 'PermanentBoosterPolicy\.Percentage') { throw 'Booster percentages do not use the complete permanent policy.' }
 if ($query -notmatch 'Lf4Level16Damage\s*=\s*212') { throw 'LF-4 level 16 damage is not applied.' }
 if ($query -notmatch 'Bo2Level16Shield\s*=\s*15900') { throw 'BO2 level 16 shield is not applied.' }
 if ($query -notmatch 'DroneLevel16DamageBonusPercent\s*=\s*16') { throw 'Level-16 drone damage bonus is not applied.' }

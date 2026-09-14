@@ -23,5 +23,6 @@ if ($migrationSource -notmatch 'CREATE TABLE IF NOT EXISTS player_competitive_qu
 if ($migrationSource -notmatch 'CREATE TABLE IF NOT EXISTS player_competitive_matches') { throw 'Competitive match schema missing.' }
 if ($apiSource -notmatch 'wins' -or $apiSource -notmatch 'losses') { throw 'Arena leaderboard does not expose results.' }
 if ($apiSource -notmatch 'StartCompetitiveDuel') { throw 'Competitive matchmaking cannot start an Elo duel.' }
+if ($apiSource -notmatch 'HasAvailableDuelArena') { throw 'Competitive matchmaking does not check arena capacity.' }
 if ($installerSource -notmatch "'web/cms'") { throw 'Arena API installation is not durable.' }
 Write-Host 'PASS: authenticated 1v1 invitation API and schema.'

@@ -38,6 +38,12 @@ internal static class GameplayExpansionTest
         Check(LaserAmmunitionPolicy.ApplyDamage(5000, AmmunitionManager.UCB_100) == 20000, "PET x4 damage mismatch");
         Check(LaserAmmunitionPolicy.ApplyDamage(5000, AmmunitionManager.RSB_75) == 25000, "PET RSB damage mismatch");
         Check(LaserAmmunitionPolicy.ApplyDamage(5000, AmmunitionManager.SAB_50) == 10000, "PET SAB damage mismatch");
+        Check(LaserAmmunitionPolicy.ApplyDamage(10000, AmmunitionManager.CBO_100) == 30000,
+            "CBO damage must remain x3");
+        Check(LaserAmmunitionPolicy.GetShieldRestore(10000, AmmunitionManager.CBO_100) == 6500,
+            "CBO shield restore must be x0.65 of base laser damage");
+        Check(LaserAmmunitionPolicy.GetShieldRestore(10000, AmmunitionManager.UCB_100) == 0,
+            "non-CBO ammunition must not receive CBO shield restore");
         Check(RocketEffectPolicy.IsEffectRocket(10), "DCR-250 must execute its slow-effect branch");
         Check(!RocketEffectPolicy.IsEffectRocket(1), "normal damage rockets must stay outside the effect branch");
 

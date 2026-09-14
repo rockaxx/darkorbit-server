@@ -55,13 +55,13 @@ namespace Ow.Game.Objects.Players.Managers
 
         public void EnsureEliteBoosters()
         {
-            EnsurePermanentBooster(BoostedAttributeType.DAMAGE, BoosterType.DMG_B01);
-            EnsurePermanentBooster(BoostedAttributeType.DAMAGE, BoosterType.DMG_B02);
-            EnsurePermanentBooster(BoostedAttributeType.DAMAGE, BoosterType.DMGM_1);
-            foreach (var boosterType in EliteBoosterPolicy.RequiredShieldBoosterTypes())
-                EnsurePermanentBooster(BoostedAttributeType.SHIELD, (BoosterType)boosterType);
-            EnsurePermanentBooster(BoostedAttributeType.MAXHP, BoosterType.HP_B01);
-            EnsurePermanentBooster(BoostedAttributeType.MAXHP, BoosterType.HP_B02);
+            EnsureAllPermanentBoosters();
+        }
+
+        public void EnsureAllPermanentBoosters()
+        {
+            foreach (var booster in PermanentBoosterPolicy.All())
+                EnsurePermanentBooster(booster.Value, booster.Key);
         }
 
         private void EnsurePermanentBooster(BoostedAttributeType attribute, BoosterType boosterType)
@@ -83,17 +83,18 @@ namespace Ow.Game.Objects.Players.Managers
             Player.SendPacket($"0|A|STM|booster_found|%BOOSTERNAME%|{boosterType.ToString()}|%HOURS%|{hours}");
 
             var seconds = (int)TimeSpan.FromHours(hours).TotalSeconds;
-            short boostedAttributeType = GetBoosterType((short)boosterType);
+            var boostedAttributeType = GetBoosterType((short)boosterType);
 
-            if (boostedAttributeType != 0)
+            if (boostedAttributeType.HasValue)
             {
-                if (!Boosters.ContainsKey((short)boostedAttributeType))
-                    Boosters[boostedAttributeType] = new List<BoosterBase>();
+                var attributeId = boostedAttributeType.Value;
+                if (!Boosters.ContainsKey(attributeId))
+                    Boosters[attributeId] = new List<BoosterBase>();
 
-                if (Boosters[boostedAttributeType].Where(x => x.Type == (short)boosterType).Count() <= 0)
-                    Boosters[boostedAttributeType].Add(new BoosterBase((short)boosterType, seconds));
+                if (Boosters[attributeId].Where(x => x.Type == (short)boosterType).Count() <= 0)
+                    Boosters[attributeId].Add(new BoosterBase((short)boosterType, seconds));
                 else
-                    Boosters[boostedAttributeType].Where(x => x.Type == (short)boosterType).FirstOrDefault().Seconds += seconds;
+                    Boosters[attributeId].Where(x => x.Type == (short)boosterType).FirstOrDefault().Seconds += seconds;
 
                 Update();
                 QueryManager.SavePlayer.Boosters(Player);
@@ -102,15 +103,16 @@ namespace Ow.Game.Objects.Players.Managers
 
         public void Remove(BoosterType boosterType)
         {
-            short boostedAttributeType = GetBoosterType((short)boosterType);
+            var boostedAttributeType = GetBoosterType((short)boosterType);
 
-            if (boostedAttributeType != 0)
+            if (boostedAttributeType.HasValue)
             {
-                if (Boosters.ContainsKey(boostedAttributeType))
-                    Boosters[boostedAttributeType].Remove(Boosters[boostedAttributeType].Where(x => x.Type == (short)boosterType).FirstOrDefault());
+                var attributeId = boostedAttributeType.Value;
+                if (Boosters.ContainsKey(attributeId))
+                    Boosters[attributeId].Remove(Boosters[attributeId].Where(x => x.Type == (short)boosterType).FirstOrDefault());
 
-                if (Boosters[boostedAttributeType].Count == 0)
-                    Boosters.Remove(boostedAttributeType);
+                if (Boosters.ContainsKey(attributeId) && Boosters[attributeId].Count == 0)
+                    Boosters.Remove(attributeId);
 
                 Update();
                 QueryManager.SavePlayer.Boosters(Player);
@@ -121,18 +123,11 @@ namespace Ow.Game.Objects.Players.Managers
         {
             var boostedAttributes = new List<BoosterUpdateModule>();
 
-            if (Boosters.ContainsKey((short)BoostedAttributeType.DAMAGE) && Boosters[(short)BoostedAttributeType.DAMAGE].Count >= 1)
-                boostedAttributes.Add(new BoosterUpdateModule(new BoostedAttributeTypeModule(BoostedAttributeTypeModule.DAMAGE), GetPercentage(BoostedAttributeType.DAMAGE), Boosters[(short)BoostedAttributeType.DAMAGE].Select(x => new BoosterTypeModule(x.Type)).ToList()));
-            if (Boosters.ContainsKey((short)BoostedAttributeType.SHIELD) && Boosters[(short)BoostedAttributeType.SHIELD].Count >= 1)
-                boostedAttributes.Add(new BoosterUpdateModule(new BoostedAttributeTypeModule(BoostedAttributeTypeModule.SHIELD), GetPercentage(BoostedAttributeType.SHIELD), Boosters[(short)BoostedAttributeType.SHIELD].Select(x => new BoosterTypeModule(x.Type)).ToList()));
-            if (Boosters.ContainsKey((short)BoostedAttributeType.MAXHP) && Boosters[(short)BoostedAttributeType.MAXHP].Count >= 1)
-                boostedAttributes.Add(new BoosterUpdateModule(new BoostedAttributeTypeModule(BoostedAttributeTypeModule.MAXHP), GetPercentage(BoostedAttributeType.MAXHP), Boosters[(short)BoostedAttributeType.MAXHP].Select(x => new BoosterTypeModule(x.Type)).ToList()));
-            if (Boosters.ContainsKey((short)BoostedAttributeType.REPAIR) && Boosters[(short)BoostedAttributeType.REPAIR].Count >= 1)
-                boostedAttributes.Add(new BoosterUpdateModule(new BoostedAttributeTypeModule(BoostedAttributeTypeModule.REPAIR), GetPercentage(BoostedAttributeType.REPAIR), Boosters[(short)BoostedAttributeType.REPAIR].Select(x => new BoosterTypeModule(x.Type)).ToList()));
-            if (Boosters.ContainsKey((short)BoostedAttributeType.HONOUR) && Boosters[(short)BoostedAttributeType.HONOUR].Count >= 1)
-                boostedAttributes.Add(new BoosterUpdateModule(new BoostedAttributeTypeModule(BoostedAttributeTypeModule.HONOUR), GetPercentage(BoostedAttributeType.HONOUR), Boosters[(short)BoostedAttributeType.HONOUR].Select(x => new BoosterTypeModule(x.Type)).ToList()));
-            if (Boosters.ContainsKey((short)BoostedAttributeType.EP) && Boosters[(short)BoostedAttributeType.EP].Count >= 1)
-                boostedAttributes.Add(new BoosterUpdateModule(new BoostedAttributeTypeModule(BoostedAttributeTypeModule.EP), GetPercentage(BoostedAttributeType.EP), Boosters[(short)BoostedAttributeType.EP].Select(x => new BoosterTypeModule(x.Type)).ToList()));
+            foreach (var attribute in Boosters.OrderBy(entry => entry.Key))
+                if (attribute.Value.Count >= 1)
+                    boostedAttributes.Add(new BoosterUpdateModule(new BoostedAttributeTypeModule(attribute.Key),
+                        GetPercentage((BoostedAttributeType)attribute.Key),
+                        attribute.Value.Select(x => new BoosterTypeModule(x.Type)).ToList()));
 
             Player.SendCommand(AttributeBoosterUpdateCommand.write(boostedAttributes));
             Player.SendCommand(AttributeHitpointUpdateCommand.write(Player.CurrentHitPoints, Player.MaxHitPoints, Player.CurrentNanoHull, Player.MaxNanoHull));
@@ -150,80 +145,19 @@ namespace Ow.Game.Objects.Players.Managers
                 foreach (var booster in Boosters[(short)boostedAttributeType])
                     percentage += GetBoosterPercentage(booster.Type);
 
-            return percentage;
+            return Math.Min(percentage, PermanentBoosterPolicy.MaximumPercentage(boostedAttributeType));
         }
 
-        private short GetBoosterType(short boosterType)
+        private short? GetBoosterType(short boosterType)
         {
-            short boostedAttributeType = 0;
-
-            switch (boosterType)
-            {
-                case BoosterTypeModule.DMG_B01:
-                case BoosterTypeModule.DMG_B02:
-                    boostedAttributeType = (short)BoostedAttributeType.DAMAGE;
-                    break;
-                case BoosterTypeModule.SHD_B01:
-                case BoosterTypeModule.SHD_B02:
-                    boostedAttributeType = (short)BoostedAttributeType.SHIELD;
-                    break;
-                case BoosterTypeModule.HP_B01:
-                case BoosterTypeModule.HP_B02:
-                    boostedAttributeType = (short)BoostedAttributeType.MAXHP;
-                    break;
-                case BoosterTypeModule.REP_B01:
-                case BoosterTypeModule.REP_B02:
-                case BoosterTypeModule.REP_S01:
-                    boostedAttributeType = (short)BoostedAttributeType.REPAIR;
-                    break;
-                case BoosterTypeModule.HON_B01:
-                case BoosterTypeModule.HON_B02:
-                case BoosterTypeModule.HON50:
-                    boostedAttributeType = (short)BoostedAttributeType.HONOUR;
-                    break;
-                case BoosterTypeModule.EP_B01:
-                case BoosterTypeModule.EP_B02:
-                case BoosterTypeModule.EP50:
-                    boostedAttributeType = (short)BoostedAttributeType.EP;
-                    break;
-            }
-
-            return boostedAttributeType;
+            var type = (BoosterType)boosterType;
+            var all = PermanentBoosterPolicy.All();
+            return all.ContainsKey(type) ? (short?)all[type] : null;
         }
 
         private int GetBoosterPercentage(short boosterTypeModule)
         {
-            var percentage = 0;
-
-            switch (boosterTypeModule)
-            {
-                case BoosterTypeModule.DMG_B01:
-                case BoosterTypeModule.DMG_B02:
-                case BoosterTypeModule.HP_B01:
-                case BoosterTypeModule.HP_B02:
-                case BoosterTypeModule.REP_B01:
-                case BoosterTypeModule.REP_B02:
-                case BoosterTypeModule.REP_S01:
-                case BoosterTypeModule.HON_B01:
-                case BoosterTypeModule.HON_B02:
-                case BoosterTypeModule.EP_B01:
-                case BoosterTypeModule.EP_B02:
-                    percentage = 10;
-                    break;
-                case BoosterTypeModule.DMGM_1:
-                    percentage = 5;
-                    break;
-                case BoosterTypeModule.SHD_B01:
-                case BoosterTypeModule.SHD_B02:
-                    percentage = 25;
-                    break;
-                case BoosterTypeModule.HON50:
-                case BoosterTypeModule.EP50:
-                    percentage = 50;
-                    break;
-            }
-
-            return percentage;
+            return PermanentBoosterPolicy.Percentage((BoosterType)boosterTypeModule);
         }
     }
 }

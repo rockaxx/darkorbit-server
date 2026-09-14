@@ -114,7 +114,10 @@
     <Compile Include="Game\Objects\Players\Attacker.cs" />
     <Compile Include="Game\Objects\Players\Managers\BoosterManager.cs" />
     <Compile Include="Game\Objects\Players\Managers\EliteBoosterPolicy.cs" />
+    <Compile Include="Game\Objects\Players\Managers\PermanentBoosterPolicy.cs" />
     <Compile Include="Game\Objects\Players\Managers\PetVisibilityPolicy.cs" />
+    <Compile Include="Game\Objects\Players\Managers\GalaxyGateBadgePolicy.cs" />
+    <Compile Include="Game\Objects\Players\Managers\HonorRankPolicy.cs" />
     <Compile Include="Game\Objects\Players\Managers\ShieldDamagePolicy.cs" />
     <Compile Include="Game\Objects\Players\RocketLauncher.cs" />
     <Compile Include="Game\Objects\POI.cs" />

@@ -49,10 +49,10 @@ namespace Ow.Game.Objects.Players.Managers
         public const int VENOM_DURATION = 60000;
         public const int VENOM_COOLDOWN = 900000;
 
-        public const int BACKUP_SHIELD_COOLDOWN = 120000;
+        public const int BACKUP_SHIELD_COOLDOWN = 60000;
 
         public const int BATTLE_REPAIR_BOT_DURATION = 10000;
-        public const int BATTLE_REPAIR_BOT_COOLDOWN = 120000;
+        public const int BATTLE_REPAIR_BOT_COOLDOWN = 60000;
 
         public const int CHAIN_IMPULSE_COOLDOWN = 60000;
 

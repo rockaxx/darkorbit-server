@@ -82,6 +82,35 @@ foreach ($relativePath in @(
     }
 }
 
+$achievementPath = Join-Path $destination 'spacemap/templates/en/resource_achievement.xml'
+$achievement = [IO.File]::ReadAllText($achievementPath)
+if (!$achievement.Contains('title_achievement_competitive-best-player')) {
+    $competitiveTitles = @'
+ <item name="title_achievement_competitive-best-player"><![CDATA[Best Player]]></item>
+ <item name="title_achievement_competitive-second-player"><![CDATA[2nd Best Player]]></item>
+ <item name="title_achievement_competitive-third-player"><![CDATA[3rd Best Player]]></item>
+'@
+    $achievement = $achievement.Replace('<resource>', "<resource>`r`n$competitiveTitles")
+    [IO.File]::WriteAllText($achievementPath, $achievement, [Text.UTF8Encoding]::new($false))
+}
+
+$achievementHash = (Get-FileHash -LiteralPath $achievementPath -Algorithm MD5).Hash.ToLowerInvariant()
+$languagePath = Join-Path $destination 'spacemap/templates/language_en.xml'
+$language = [IO.File]::ReadAllText($languagePath)
+$achievementEntry = '    <file version="1" type="xml" name="resource_achievement" location="en" id="resource_achievement" hash="' + $achievementHash + '" debugView="false"/>'
+$achievementEntryPattern = [Text.RegularExpressions.Regex]::new(
+    '(?m)^\s*(?:<file[^>]+id="resource_achievement"[^>]*/>|\$1[0-9a-f]{32}" debugView="false"/>)\s*$'
+)
+if (!$achievementEntryPattern.IsMatch($language)) {
+    throw 'Could not find or recover the resource_achievement manifest entry.'
+}
+$language = $achievementEntryPattern.Replace(
+    $language,
+    [Text.RegularExpressions.MatchEvaluator]{ param($match) $achievementEntry },
+    1
+)
+[IO.File]::WriteAllText($languagePath, $language, [Text.UTF8Encoding]::new($false))
+
 $inventoryPath = Join-Path $destination 'flashAPI/inventory.php'
 $inventory = [IO.File]::ReadAllText($inventoryPath)
 if (!$inventory.Contains('EliteUpgradeLevel')) {

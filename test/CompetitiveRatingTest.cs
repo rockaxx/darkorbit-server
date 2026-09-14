@@ -32,10 +32,14 @@ internal static class CompetitiveRatingTest
         Check(CompetitiveRatingPolicy.TitleType("Best Player") == 0, "rank 1 title must use the visible legacy title type");
         Check(CompetitiveRatingPolicy.TitleType("2nd Best Player") == 0, "rank 2 title must use the visible legacy title type");
         Check(CompetitiveRatingPolicy.TitleType("3rd Best Player") == 0, "rank 3 title must use the visible legacy title type");
-        Check(CompetitiveRatingPolicy.TitlePacket(7, "Best Player") == "0|n|t|7|0|Best Player",
-            "competitive title packet must target the ship and use the client-supported title type");
-        Check(CompetitiveRatingPolicy.TitlePacket(7, "") == "0|n|trm|7",
-            "empty competitive title must remove the title below the ship");
+        Check(CompetitiveRatingPolicy.TitlePacket(7, "Best Player") == "0|n|pt|7|title_achievement_competitive-best-player",
+            "competitive title packet must use a valid achievement resource key below the ship");
+        Check(CompetitiveRatingPolicy.TitlePacket(7, "2nd Best Player") == "0|n|pt|7|title_achievement_competitive-second-player",
+            "second place must use its achievement resource key");
+        Check(CompetitiveRatingPolicy.TitlePacket(7, "3rd Best Player") == "0|n|pt|7|title_achievement_competitive-third-player",
+            "third place must use its achievement resource key");
+        Check(CompetitiveRatingPolicy.TitlePacket(7, "") == "0|n|pt|7|",
+            "empty competitive title must clear the permanent line below the ship");
 
         Console.WriteLine("PASS: competitive Elo and title policy.");
         return 0;

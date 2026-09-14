@@ -458,8 +458,9 @@ namespace Ow.Game.Objects.Players.Managers
             var targetPlayer = target as Player;
             var crabFormation = targetPlayer != null &&
                 targetPlayer.Settings.InGameSettings.selectedFormation == DroneManager.CRAB_FORMATION;
+            var attackerMothFormation = attacker.Settings.InGameSettings.selectedFormation == DroneManager.MOTH_FORMATION;
             var split = ShieldDamagePolicy.Calculate(damage, target.CurrentShieldPoints,
-                target.ShieldAbsorption, shieldPenetration, crabFormation);
+                target.ShieldAbsorption, shieldPenetration, crabFormation, attackerMothFormation);
             damageShd = split.Shield;
             damageHp = split.Hitpoints;
 
@@ -524,7 +525,9 @@ namespace Ow.Game.Objects.Players.Managers
 
             if (Player.Settings.InGameSettings.selectedLaser == AmmunitionManager.CBO_100)
             {
-                var sabDamage = RandomizeDamage(2 * Player.Damage, (Player.Storage.underPLD8 ? 0.5 : 0.1));
+                var sabDamage = RandomizeDamage(
+                    LaserAmmunitionPolicy.GetShieldRestore(Player.Damage, AmmunitionManager.CBO_100),
+                    (Player.Storage.underPLD8 ? 0.5 : 0.1));
 
                 if (Player.Storage.Spectrum)
                     sabDamage -= Maths.GetPercentage(sabDamage, 50);
@@ -595,7 +598,9 @@ namespace Ow.Game.Objects.Players.Managers
                 targetPlayer.Settings.InGameSettings.selectedFormation == DroneManager.CRAB_FORMATION;
             if (crabAbsorbsPlayerDamage)
             {
-                var split = ShieldDamagePolicy.Calculate(damage, target.CurrentShieldPoints, 0.8, 0, true);
+                var attackerMothFormation = attacker.Settings.InGameSettings.selectedFormation == DroneManager.MOTH_FORMATION;
+                var split = ShieldDamagePolicy.Calculate(damage, target.CurrentShieldPoints, 0.8, 0, true,
+                    attackerMothFormation);
                 hitpointDamage = split.Hitpoints;
                 shieldDamage = split.Shield;
             }

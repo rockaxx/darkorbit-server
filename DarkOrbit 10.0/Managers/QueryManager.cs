@@ -25,6 +25,44 @@ namespace Ow.Managers
 {
     class QueryManager
     {
+        private static readonly object HonorRankSync = new object();
+
+        public static void RecalculateHonorRanks()
+        {
+            lock (HonorRankSync)
+            {
+                using (var mySqlClient = SqlDatabaseManager.GetClient())
+                {
+                    var table = (DataTable)mySqlClient.ExecuteQueryTable(
+                        "SELECT userId, rankId, CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(data, '$.honor')), '0') AS SIGNED) AS honor FROM player_accounts");
+                    var candidates = new List<HonorRankCandidate>();
+                    var currentRanks = new Dictionary<int, int>();
+
+                    foreach (DataRow row in table.Rows)
+                    {
+                        var userId = Convert.ToInt32(row["userId"]);
+                        var currentRankId = Convert.ToInt32(row["rankId"]);
+                        var honor = Convert.ToInt64(row["honor"]);
+                        candidates.Add(new HonorRankCandidate(userId, honor, currentRankId));
+                        currentRanks[userId] = currentRankId;
+                    }
+
+                    foreach (var calculatedRank in HonorRankPolicy.Calculate(candidates))
+                    {
+                        if (currentRanks[calculatedRank.Key] != calculatedRank.Value)
+                        {
+                            mySqlClient.ExecuteNonQuery(
+                                $"UPDATE player_accounts SET rankId = {calculatedRank.Value} WHERE userId = {calculatedRank.Key} AND rankId NOT IN (21, 22)");
+                        }
+
+                        var gameSession = GameManager.GetGameSession(calculatedRank.Key);
+                        if (gameSession != null && gameSession.Player != null)
+                            gameSession.Player.RankId = calculatedRank.Value;
+                    }
+                }
+            }
+        }
+
         public class SavePlayer
         {
             public static void Settings(Player player, string target, object settings)
@@ -256,6 +294,8 @@ namespace Ow.Managers
             Player player = null;
             try
             {
+                RecalculateHonorRanks();
+
                 using (var mySqlClient = SqlDatabaseManager.GetClient())
                 {
                     var data = mySqlClient.ExecuteQueryTable($"SELECT * FROM player_accounts WHERE userId = {playerId}");

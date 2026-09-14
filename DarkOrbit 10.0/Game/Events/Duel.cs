@@ -79,7 +79,13 @@ namespace Ow.Game.Events
             var firstBusy = first != null && (first.Storage.Duel != null || first.Storage.Uba != null || EventManager.JackpotBattle.InEvent(first));
             var secondBusy = second != null && (second.Storage.Duel != null || second.Storage.Uba != null || EventManager.JackpotBattle.InEvent(second));
             return DuelPolicy.CanInvite(first?.Id ?? 0, second?.Id ?? 0, firstOnline, secondOnline, firstBusy, secondBusy) &&
-                !first.Destroyed && !second.Destroyed;
+                !first.Destroyed && !second.Destroyed && HasAvailableArena();
+        }
+
+        public static bool HasAvailableArena()
+        {
+            lock (ArenaAllocationLock)
+                return AvailableArenaMaps.Any(id => !ActiveArenas.ContainsKey(id) && GameManager.GetSpacemap(id) != null);
         }
 
         public static bool CanQueue(Player player)
@@ -157,6 +163,8 @@ namespace Ow.Game.Events
 
         public void Tick()
         {
+            foreach (var player in Players.Values.Where(player => player.Destroyed || player.GameSession == null).ToList())
+                RemovePlayer(player);
             if (Players.Count <= 1) Finish();
         }
 
@@ -188,22 +196,36 @@ namespace Ow.Game.Events
                 if (participant.GameSession != null)
                     participant.SendPacket("0|n|KSMSG|label_traininggrounds_results_defeat");
 
-            await Task.Delay(2500);
-            foreach (var participant in participants.Values)
+            try
             {
-                foreach (var mine in ArenaMap.Objects.Values.OfType<Mine>().Where(mine => mine.Player == participant).ToList())
-                    mine.Remove(true);
-                participant.RemoveVisualModifier(VisualModifierCommand.CAMERA);
-                participant.DisableAttack(participant.Settings.InGameSettings.selectedLaser);
-                if (participant.Storage.Duel == this) participant.Storage.Duel = null;
+                await Task.Delay(2500);
+                foreach (var participant in participants.Values)
+                {
+                    try
+                    {
+                        foreach (var mine in ArenaMap.Objects.Values.OfType<Mine>().Where(mine => mine.Player == participant).ToList())
+                            mine.Remove(true);
+                        participant.RemoveVisualModifier(VisualModifierCommand.CAMERA);
+                        participant.DisableAttack(participant.Settings.InGameSettings.selectedLaser);
+                        if (participant.Storage.Duel == this) participant.Storage.Duel = null;
 
-                if (GameManager.GetGameSession(participant.Id) == null) continue;
-                var location = ReturnLocations[participant.Id];
-                participant.Destroyed = false;
-                participant.CurrentHitPoints = participant.MaxHitPoints;
-                participant.CurrentShieldConfig1 = participant.MaxShieldPoints;
-                participant.CurrentShieldConfig2 = participant.MaxShieldPoints;
-                participant.Jump(location.MapId, new Position(location.Position.X, location.Position.Y));
+                        if (GameManager.GetGameSession(participant.Id) == null) continue;
+                        var location = ReturnLocations[participant.Id];
+                        participant.Destroyed = false;
+                        participant.CurrentHitPoints = participant.MaxHitPoints;
+                        participant.CurrentShieldConfig1 = participant.MaxShieldPoints;
+                        participant.CurrentShieldConfig2 = participant.MaxShieldPoints;
+                        participant.Jump(location.MapId, new Position(location.Position.X, location.Position.Y));
+                    }
+                    catch (Exception error)
+                    {
+                        Logger.Log("error_log", $"- [Duel.cs] Participant cleanup failed for {participant.Id}: {error}");
+                    }
+                }
+            }
+            catch (Exception error)
+            {
+                Logger.Log("error_log", $"- [Duel.cs] Duel cleanup failed: {error}");
             }
 
             await Task.Delay(Portal.JUMP_DELAY + 500);
@@ -225,6 +247,12 @@ namespace Ow.Game.Events
             var duel = player?.Storage.Duel;
             return duel != null && player.Spacemap != null && player.Spacemap.Id == duel.ArenaMap.Id &&
                 duel.ArenaMap.Characters.ContainsKey(player.Id);
+        }
+
+        public static bool IsParticipant(Player player)
+        {
+            var duel = player?.Storage?.Duel;
+            return duel != null && duel.participants.ContainsKey(player.Id);
         }
 
         public Player GetOpponent(Player player)

@@ -17,14 +17,16 @@ namespace Ow.Game.Objects.Players.Managers
     internal static class ShieldDamagePolicy
     {
         public static ShieldDamageResult Calculate(int damage, int currentShield,
-            double shieldAbsorption, double shieldPenetration, bool crabFormation)
+            double shieldAbsorption, double shieldPenetration, bool crabFormation,
+            bool attackerMothFormation)
         {
             damage = Math.Max(0, damage);
             currentShield = Math.Max(0, currentShield);
 
             if (crabFormation)
             {
-                var shieldDamage = Math.Min((int)(damage * 0.8), currentShield);
+                var shieldRatio = attackerMothFormation ? 0.8 : 1.0;
+                var shieldDamage = Math.Min((int)(damage * shieldRatio), currentShield);
                 return new ShieldDamageResult(shieldDamage, damage - shieldDamage);
             }
 

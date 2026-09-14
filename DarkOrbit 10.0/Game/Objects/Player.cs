@@ -625,7 +625,7 @@ namespace Ow.Game.Objects
 
         public int GetRingsCount()
         {
-            return WarRank == 1 ? 100 : WarRank == 2 ? 63 : WarRank == 3 ? 31 : WarRank == 4 ? 15 : WarRank == 5 ? 7 : WarRank == 6 ? 3 : WarRank == 7 ? 1 : 0;
+            return GalaxyGateBadgePolicy.ForPlayer(WarRank);
         }
 
         public bool Attackable()
@@ -952,6 +952,8 @@ namespace Ow.Game.Objects
             }
 
             QueryManager.SavePlayer.Information(this);
+            if (dataType == DataType.HONOR)
+                QueryManager.RecalculateHonorRanks();
         }
 
         public void CheckNextLevel(long experience)

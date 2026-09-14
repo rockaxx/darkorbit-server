@@ -23,14 +23,15 @@ internal static class PetKamikazePolicyTest
             "selecting kamikaze must immediately pursue a valid enemy");
         Check(!PetKamikazePolicy.ShouldPursue(true, true, true, 50000, 50000, 50000, 50000, false, now, now),
             "PET must not start a kamikaze run without a valid enemy");
-        Check(!PetKamikazePolicy.ShouldDetonate(true, 301), "PET must not explode before reaching the enemy");
-        Check(PetKamikazePolicy.ShouldDetonate(true, 300), "PET must explode at the blast-radius boundary");
+        Check(!PetKamikazePolicy.ShouldDetonate(true, 76), "PET must not explode before reaching the enemy closely");
+        Check(PetKamikazePolicy.ShouldDetonate(true, 75), "PET must explode only at the close-range boundary");
         Check(PetKamikazePolicy.ActivationHitpoints(2500, 50000) == 2500,
             "normal PET reactivation must preserve damage instead of healing for free");
         Check(PetKamikazePolicy.ActivationHitpoints(60000, 50000) == 50000,
             "PET activation hitpoints must be capped at maximum");
-        Check(PetKamikazePolicy.IsInBlastRadius(300), "radius boundary must hit");
-        Check(!PetKamikazePolicy.IsInBlastRadius(301), "outside radius must not hit");
+        Check(PetKamikazePolicy.IsInBlastRadius(75), "close-range boundary must hit");
+        Check(!PetKamikazePolicy.IsInBlastRadius(76), "outside close range must not hit");
+        Check(PetKamikazePolicy.BlastRadius == 75, "G-KK1 must reach the target before exploding");
         Check(PetKamikazePolicy.Damage == 150000, "G-KK1 must deal 150000 damage");
         Check(PetKamikazePolicy.Cooldown == TimeSpan.FromSeconds(25), "G-KK1 cooldown must be 25 seconds");
         Check(PetVisibilityPolicy.ShouldSynchronize(true, false, true, 0), "active PET must synchronize to its owner after a map jump");

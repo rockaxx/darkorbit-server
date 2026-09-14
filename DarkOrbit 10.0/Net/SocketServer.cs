@@ -171,6 +171,9 @@ class SocketServer
                 player = GameManager.GetPlayerById(Int(parameters["UserId"]));
                 Send(handler, Duel.CanQueue(player).ToString());
                 break;
+            case "HasAvailableDuelArena":
+                Send(handler, Duel.HasAvailableArena().ToString());
+                break;
             case "StartCompetitiveDuel":
                 Send(handler, Duel.TryCreateCompetitive(
                     GameManager.GetPlayerById(Int(parameters["Player1Id"])),

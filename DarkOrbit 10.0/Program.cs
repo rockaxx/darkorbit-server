@@ -85,6 +85,8 @@ namespace Ow
 
         public static void LoadDatabase()
         {
+            QueryManager.RecalculateHonorRanks();
+            QueryManager.RefreshCompetitiveTitles();
             QueryManager.LoadClans();
             QueryManager.LoadShips();
             QueryManager.LoadMaps();

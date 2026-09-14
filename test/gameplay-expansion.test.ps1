@@ -20,6 +20,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Gameplay expansion policy failed.' }
 
 $duel = Get-Content -Raw (Join-Path $root 'DarkOrbit 10.0/Game/Events/Duel.cs')
 $pet = Get-Content -Raw (Join-Path $root 'DarkOrbit 10.0/Game/Objects/Pet.cs')
+$attack = Get-Content -Raw (Join-Path $root 'DarkOrbit 10.0/Game/Objects/Players/Managers/AttackManager.cs')
 $settings = Get-Content -Raw (Join-Path $root 'DarkOrbit 10.0/Game/Objects/Players/Managers/SettingsManager.cs')
 $cpu = Get-Content -Raw (Join-Path $root 'DarkOrbit 10.0/Game/Objects/Players/Managers/CpuManager.cs')
 $petHandler = Get-Content -Raw (Join-Path $root 'DarkOrbit 10.0/Net/netty/handlers/PetRequestHandlers/PetRequestHandler.cs')
@@ -28,6 +29,7 @@ if ($duel -notmatch 'try[\s\S]{0,300}RecordDuelResult[\s\S]{0,300}catch') { thro
 if ($duel -match 'arenaBoundary|ClampArena|SetPosition\(new Position\(clamped') { throw '1v1 still contains the custom POI or movement clamp.' }
 if ($pet -match 'Damage\s*=\s*0') { throw 'PET damage can still be permanently zeroed.' }
 if ($pet -notmatch 'GetSelectedLaser\(\),\s*false,\s*true') { throw 'PET does not use the thick laser visual.' }
+if ($attack -notmatch 'LaserAmmunitionPolicy\.GetShieldRestore\(Player\.Damage,\s*AmmunitionManager\.CBO_100\)') { throw 'CBO runtime does not use the configured shield restore policy.' }
 if ($settings -notmatch 'AmmunitionManager\.CBR') { throw 'CBR football ammunition is not visible.' }
 if ($settings -notmatch 'CpuManager\.AIM_CPU') { throw 'AIM CPU is not visible.' }
 if ($cpu -notmatch 'AIM_CPU') { throw 'AIM CPU has no server behavior.' }

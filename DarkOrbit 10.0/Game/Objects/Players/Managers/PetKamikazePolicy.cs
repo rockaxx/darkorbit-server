@@ -5,7 +5,7 @@ namespace Ow.Game.Objects.Players.Managers
     static class PetKamikazePolicy
     {
         public const int Damage = 150000;
-        public const int BlastRadius = 300;
+        public const int BlastRadius = 75;
         public const int TriggerPercent = 20;
         public static readonly TimeSpan Cooldown = TimeSpan.FromSeconds(25);
 

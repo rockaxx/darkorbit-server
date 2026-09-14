@@ -48,9 +48,15 @@ namespace Ow.Game.Events
 
         public static string TitlePacket(int playerId, string title)
         {
-            return string.IsNullOrEmpty(title)
-                ? string.Format("0|n|trm|{0}", playerId)
-                : string.Format("0|n|t|{0}|{1}|{2}", playerId, TitleType(title), title);
+            return string.Format("0|n|pt|{0}|{1}", playerId, TitleResourceKey(title));
+        }
+
+        public static string TitleResourceKey(string title)
+        {
+            if (title == "Best Player") return "title_achievement_competitive-best-player";
+            if (title == "2nd Best Player") return "title_achievement_competitive-second-player";
+            if (title == "3rd Best Player") return "title_achievement_competitive-third-player";
+            return title ?? "";
         }
 
         public static bool IsCompetitiveTitle(string title)

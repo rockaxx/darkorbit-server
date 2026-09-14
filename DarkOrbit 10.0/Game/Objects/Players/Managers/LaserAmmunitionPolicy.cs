@@ -25,5 +25,10 @@ namespace Ow.Game.Objects.Players.Managers
                     return 1;
             }
         }
+
+        public static int GetShieldRestore(int baseDamage, string ammunition)
+        {
+            return ammunition == AmmunitionManager.CBO_100 ? (int)((long)baseDamage * 65 / 100) : 0;
+        }
     }
 }

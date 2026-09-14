@@ -174,7 +174,7 @@ namespace Ow.Game.Objects.Stations
                     var crabFormation = targetPlayer != null &&
                         targetPlayer.Settings.InGameSettings.selectedFormation == DroneManager.CRAB_FORMATION;
                     var split = ShieldDamagePolicy.Calculate(damage, target.CurrentShieldPoints,
-                        target.ShieldAbsorption, shieldPenetration, crabFormation);
+                        target.ShieldAbsorption, shieldPenetration, crabFormation, false);
                     damageShd = split.Shield;
                     damageHp = split.Hitpoints;
 

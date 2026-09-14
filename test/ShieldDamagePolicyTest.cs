@@ -10,19 +10,23 @@ internal static class ShieldDamagePolicyTest
 
     public static int Main()
     {
-        var normal = ShieldDamagePolicy.Calculate(1000, 5000, 0.8, 0.1, false);
+        var normal = ShieldDamagePolicy.Calculate(1000, 5000, 0.8, 0.1, false, false);
         Check(normal.Shield == 700 && normal.Hitpoints == 300,
             "normal formations must retain shield penetration");
 
-        var crab = ShieldDamagePolicy.Calculate(1000, 5000, 1.0, 0.4, true);
-        Check(crab.Shield == 800 && crab.Hitpoints == 200,
-            "Crab must absorb 80 percent, allowing 20 percent into HP");
+        var crab = ShieldDamagePolicy.Calculate(1000, 5000, 1.0, 0.4, true, false);
+        Check(crab.Shield == 1000 && crab.Hitpoints == 0,
+            "Crab must block all HP penetration while shield remains");
 
-        var crabOverflow = ShieldDamagePolicy.Calculate(1000, 200, 1.0, 0.4, true);
+        var crabAgainstMoth = ShieldDamagePolicy.Calculate(1000, 5000, 1.0, 0.4, true, true);
+        Check(crabAgainstMoth.Shield == 800 && crabAgainstMoth.Hitpoints == 200,
+            "Moth must penetrate 20 percent of Crab into HP");
+
+        var crabOverflow = ShieldDamagePolicy.Calculate(1000, 200, 1.0, 0.4, true, false);
         Check(crabOverflow.Shield == 200 && crabOverflow.Hitpoints == 800,
             "damage exceeding the remaining Crab shield must reach HP");
 
-        var crabWithoutShield = ShieldDamagePolicy.Calculate(1000, 0, 1.0, 0.4, true);
+        var crabWithoutShield = ShieldDamagePolicy.Calculate(1000, 0, 1.0, 0.4, true, false);
         Check(crabWithoutShield.Shield == 0 && crabWithoutShield.Hitpoints == 1000,
             "attacks after Crab shield reaches zero must damage HP");
 

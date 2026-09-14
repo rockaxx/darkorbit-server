@@ -200,6 +200,7 @@ namespace Ow.Game.Objects
             Destroyed = true;
 
             var destroyCommand = ShipDestroyedCommand.write(Id, 0);
+            var duelParticipant = this is Player && Duel.IsParticipant(this as Player);
 
             if (this is Activatable)
                 GameManager.SendCommandToMap(Spacemap.Id, destroyCommand);
@@ -208,7 +209,7 @@ namespace Ow.Game.Objects
 
             if (this is Player player)
             {
-                var duelDeath = Duel.InDuel(player);
+                var duelDeath = duelParticipant;
                 if (EventManager.JackpotBattle.InEvent(player))
                     GameManager.SendPacketToMap(EventManager.JackpotBattle.Spacemap.Id, $"0|A|STM|msg_jackpot_players_left|%COUNT%|{(EventManager.JackpotBattle.Spacemap.Characters.Count - 1)}");
 
@@ -300,13 +301,13 @@ namespace Ow.Game.Objects
                     credits = (this as Character).Ship.Rewards.Credits;
 
                     repeatedKillCount = destroyerPlayer.Storage.KilledPlayerIds.Count(x => x == Id);
-                    if (this is Player && repeatedKillCount >= 14 && !Duel.InDuel(destroyerPlayer))
+                    if (this is Player && repeatedKillCount >= 14 && !Duel.IsParticipant(destroyerPlayer))
                     {
                         reward = false;
                         destroyerPlayer.SendPacket($"0|A|STM|pusher_info_no_reward|%NAME%|{Name}");
                     }
 
-                    if (this is Player && Duel.InDuel(this as Player))
+                    if (this is Player && duelParticipant)
                         reward = false;
                 }
                 else if (this is Activatable)
@@ -351,7 +352,7 @@ namespace Ow.Game.Objects
 
                 if (this is Player)
                 {
-                    if (!Duel.InDuel(this as Player))
+                    if (!duelParticipant)
                     {
                         using (var mySqlClient = SqlDatabaseManager.GetClient())
                             mySqlClient.ExecuteNonQuery(PlayerKillLog.CreateInsert(destroyerPlayer.Id, Id, repeatedKillCount >= 14));
@@ -360,14 +361,14 @@ namespace Ow.Game.Objects
                     new CargoBox(Position, Spacemap, false, false, destroyerPlayer);
                 }
             } 
-            else if (destructionType == DestructionType.RADIATION && this is Player && !Duel.InDuel(this as Player))
+            else if (destructionType == DestructionType.RADIATION && this is Player && !duelParticipant)
             {
                 (this as Player).Destructions.dbrz++;
             }
 
             if (this is Character character)
             {
-                if (this is Player && Duel.InDuel(this as Player))
+                if (this is Player && duelParticipant)
                     Duel.RemovePlayer(this as Player);
 
                 Spacemap.RemoveCharacter(character);
@@ -395,7 +396,8 @@ namespace Ow.Game.Objects
         public DateTime outOfRangeCooldown = new DateTime();
         public DateTime inAttackCooldown = new DateTime();
         public DateTime peaceAreaCooldown = new DateTime();
-        public bool TargetDefinition(Attackable target, bool sendMessage = true, bool isPlayerRocketAttack = false)
+        public bool TargetDefinition(Attackable target, bool sendMessage = true, bool isPlayerRocketAttack = false,
+            bool ignoreRange = false)
         {
             if (target == null) return false;
 
@@ -482,7 +484,7 @@ namespace Ow.Game.Objects
 
             var range = this is Player ? (isPlayerRocketAttack ? (this as Player).AttackManager.GetRocketRange() : AttackRange) : this is Satellite ? (this as Satellite).GetRange() : this is Npc ? 450 : AttackRange;
 
-            if (Position.DistanceTo(target.Position) > range)
+            if (!ignoreRange && Position.DistanceTo(target.Position) > range)
             {
                 if (outOfRangeCooldown.AddSeconds(5) < DateTime.Now)
                 {
